@@ -1,0 +1,1 @@
+# Responsável pelos esquemas de validação de entrada de dados
