@@ -2,16 +2,11 @@
 
 Projeto desenvolvido para a disciplina de **Laboratório de Engenharia de Software**.
 
-O sistema consiste em uma **API REST** para uma plataforma de e-commerce, permitindo que clientes realizem compras online de forma segura, enquanto administradores gerenciam produtos, categorias, pedidos e demais recursos do sistema.
+O sistema consiste em uma **API REST** para uma plataforma de e-commerce, permitindo que clientes realizem compras online de forma segura, enquanto administradores gerenciam produtos, categorias, pedidos e demais recursos do sistema. O objetivo é desenvolver o backend de uma plataforma de e-commerce utilizando uma arquitetura em camadas, aplicando conceitos de Engenharia de Software, Banco de Dados e desenvolvimento de APIs REST. Além da implementação das funcionalidades principais, o projeto busca aplicar boas práticas de organização de código, versionamento e testes automatizados.
 
 ---
 
-# 📖 Sobre o Projeto
-
-O objetivo deste projeto é desenvolver o backend de uma plataforma de e-commerce utilizando uma arquitetura em camadas, aplicando conceitos de Engenharia de Software, Banco de Dados e desenvolvimento de APIs REST. Além da implementação das funcionalidades principais, o projeto busca aplicar boas práticas de organização de código, versionamento e testes automatizados.
----
-
-# 🚀 Tecnologias Utilizadas
+## 🚀 Tecnologias Utilizadas
 
 * Python 3.12
 * FastAPI
@@ -20,9 +15,7 @@ O objetivo deste projeto é desenvolver o backend de uma plataforma de e-commerc
 * Alembic
 * Pytest
 
----
-
-# 📂 Estrutura do Projeto
+## 📂 Estrutura do Projeto
 
 ```text
 ecommerce-es/
@@ -46,34 +39,7 @@ ecommerce-es/
 └── README.md
 ```
 
----
-
-# 🏛 Arquitetura
-
-O projeto segue uma arquitetura em camadas, separando responsabilidades para facilitar manutenção, escalabilidade e testes.
-
-```text
-Cliente
-
-↓
-
-Routes / Controllers
-
-↓
-
-Services
-
-↓
-
-Repositories
-
-↓
-
-Banco de Dados
-```
----
-
-# 📌 Funcionalidades
+## 📌 Funcionalidades
 
 * Cadastro de usuários
 * Login e autenticação
@@ -84,9 +50,7 @@ Banco de Dados
 * Processamento de pagamentos
 * Controle de estoque
 
----
-
-# 📋 Regras de Negócio
+## 📋 Regras de Negócio
 
 * Apenas usuários autenticados podem realizar compras.
 * Cupons somente podem ser utilizados enquanto estiverem ativos e dentro da validade.
@@ -95,45 +59,42 @@ Banco de Dados
 
 ---
 
-# 📐 Diagramas
+## 📐 Diagramas
 
-## Diagrama Entidade-Relacionamento (DER)
+### Diagrama Entidade-Relacionamento (DER)
 
 <p align="center">
-<img src="docs/DER ecommerce.drawio.png" width="900">
+<img src="docs/DER ecommerce.drawio.png" width="750">
 </p>
 
----
 
 ## Diagrama de Casos de Uso
 
 <p align="center">
-<img src="docs/Caso de Uso.drawio.png" width="900">
+<img src="docs/Caso de Uso.drawio.png" width="500">
 </p>
 
----
+## ▶ Como Executar o Projeto
 
-# ▶ Como Executar o Projeto
-
-## 1. Clonar o repositório
+### 1. Clonar o repositório
 
 ```bash
 git clone https://github.com/ecommerce-es.git
 ```
 
-## 2. Entrar na pasta
+### 2. Entrar na pasta
 
 ```bash
 cd ecommerce-es
 ```
 
-## 3. Criar o ambiente virtual
+### 3. Criar o ambiente virtual
 
 ```bash
 python -m venv .venv
 ```
 
-## 4. Ativar o ambiente virtual
+### 4. Ativar o ambiente virtual
 
 ### Windows
 
@@ -147,7 +108,7 @@ python -m venv .venv
 source .venv/bin/activate
 ```
 
-## 5. Instalar as dependências
+### 5. Instalar as dependências
 
 Caso utilize **uv**:
 
@@ -161,7 +122,7 @@ Ou utilizando **pip**:
 pip install -e .
 ```
 
-## 6. Configurar as variáveis de ambiente
+### 6. Configurar as variáveis de ambiente
 
 Copie o arquivo de exemplo:
 
@@ -171,13 +132,13 @@ cp .env.example .env
 
 Configure as credenciais do banco PostgreSQL antes de iniciar a aplicação.
 
-## 7. Executar as migrações
+### 7. Executar as migrações
 
 ```bash
 alembic upgrade head
 ```
 
-## 8. Iniciar a aplicação
+### 8. Iniciar a aplicação
 
 ```bash
 uvicorn src.main:app --reload
@@ -189,9 +150,7 @@ A API estará disponível em:
 http://localhost:8000
 ```
 
----
-
-# 🧪 Testes
+## 🧪 Testes
 
 Para executar os testes automatizados:
 
@@ -199,9 +158,7 @@ Para executar os testes automatizados:
 pytest
 ```
 
----
-
-# 👥 Integrantes
+## 👥 Integrantes
 
 <div align="center">
 
@@ -211,5 +168,3 @@ pytest
 | Ygor Pereira | [![GitHub](https://img.shields.io/badge/GitHub-111217?style=flat-square\&logo=github\&logoColor=white)](https://github.com/YgorPereira) |
 
 </div>
-
----
