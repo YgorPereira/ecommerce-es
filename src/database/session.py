@@ -12,8 +12,11 @@ SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 def get_db():
     db: Session = SessionLocal()
-
     try:
         yield db
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
     finally:
         db.close()
