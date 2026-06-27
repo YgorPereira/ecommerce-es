@@ -2,6 +2,7 @@ import uuid
 
 import pytest
 
+from src.modules.users.entity import User
 from src.modules.users.models import UserModel
 from src.modules.users.enums.role import UserRole
 
@@ -28,6 +29,7 @@ def persisted_user(user_repository, user):
 def test_create_user(user_repository, user):
     created_user = user_repository.create(user)
 
+    assert isinstance(created_user, User)
     assert created_user.name == user.name
     assert created_user.cpf == user.cpf
     assert created_user.email == user.email
@@ -39,6 +41,7 @@ def test_create_user(user_repository, user):
 def test_get_user_by_id(user_repository, persisted_user, user):
     found_user = user_repository.get_by_id(persisted_user.id)
 
+    assert isinstance(found_user, User)
     assert found_user.name == user.name
     assert found_user.cpf == user.cpf
     assert found_user.email == user.email
@@ -50,6 +53,7 @@ def test_get_user_by_id(user_repository, persisted_user, user):
 def test_get_user_by_email(user_repository, persisted_user, user):
     found_user = user_repository.get_by_email(persisted_user.email)
 
+    assert isinstance(found_user, User)
     assert found_user.id == persisted_user.id
     assert found_user.name == persisted_user.name
     assert found_user.cpf == persisted_user.cpf
@@ -66,6 +70,7 @@ def test_update_user_by_id(user_repository, persisted_user):
 
     updated_user = user_repository.update_by_id(persisted_user)
 
+    assert isinstance(updated_user, User)
     assert updated_user.id == persisted_user.id
     assert updated_user.name == "Luana"
     assert updated_user.email == "luana@gmail.com"
@@ -100,6 +105,8 @@ def test_get_all_users(user_repository, user):
 
     users = user_repository.get_all()
 
+    assert isinstance(users, list)
+    assert all(isinstance(user, User) for user in users)
     assert len(users) == 2
     emails = [u.email for u in users]
     assert user.email in emails
