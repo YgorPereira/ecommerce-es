@@ -2,7 +2,7 @@ from typing import List
 import uuid
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.modules.users.entity import User
 from src.modules.users.mapper import UserMapper
@@ -10,23 +10,23 @@ from src.modules.users.models import UserModel
 
 
 class UserRepository:
-    def __init__(self, db_session: Session):
+    def __init__(self, db_session: AsyncSession):
         self.db_session = db_session
 
-    def create(self, user: User) -> User:
+    async def create(self, user: User) -> User:
         mapped_user = UserMapper.to_model(user)
         self.db_session.add(mapped_user)
         self.db_session.flush()
         self.db_session.refresh(mapped_user)
         return UserMapper.to_entity(mapped_user)
 
-    def get_all(self) -> List[User]:
+    async def get_all(self) -> List[User]:
         query = select(UserModel)
         models = list(self.db_session.scalars(query).all())
 
         return [UserMapper.to_entity(model) for model in models]
 
-    def get_by_id(self, id: uuid.UUID) -> UserModel | None:
+    async def get_by_id(self, id: uuid.UUID) -> UserModel | None:
         model = self.db_session.get(UserModel, id)
 
         if model is None:
@@ -34,7 +34,7 @@ class UserRepository:
 
         return UserMapper.to_entity(model)
 
-    def get_by_email(self, email: str) -> User | None :
+    async def get_by_email(self, email: str) -> User | None :
         query = select(UserModel).where(UserModel.email == email)
 
         model = self.db_session.scalars(query).first()
@@ -44,7 +44,7 @@ class UserRepository:
         
         return UserMapper.to_entity(model)
 
-    def update_by_id(self, user: User) -> UserModel | None:
+    async def update_by_id(self, user: User) -> User | None:
         model = UserMapper.to_model(user)
         db_user = self.db_session.merge(model)
 
@@ -55,7 +55,7 @@ class UserRepository:
 
         return UserMapper.to_entity(db_user)
 
-    def delete_by_id(self, id: uuid.UUID) -> bool:
+    async def delete_by_id(self, id: uuid.UUID) -> bool:
         model = self.db_session.get(UserModel, id)
 
         if model is None:

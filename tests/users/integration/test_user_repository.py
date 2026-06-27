@@ -11,7 +11,7 @@ from src.modules.users.enums.role import UserRole
 def user():
     unique = str(uuid.uuid4())
 
-    return UserModel(
+    return User(
         name="Ygor",
         cpf=unique[:11],
         email=f"{unique}@gmail.com",
@@ -21,13 +21,13 @@ def user():
 
 
 @pytest.fixture(scope="function")
-def persisted_user(user_repository, user):
-    return user_repository.create(user)
+async def persisted_user(user_repository, user):
+    return await user_repository.create(user)
 
 
 @pytest.mark.integration()
-def test_create_user(user_repository, user):
-    created_user = user_repository.create(user)
+async def test_create_user(user_repository, user):
+    created_user = await user_repository.create(user)
 
     assert isinstance(created_user, User)
     assert created_user.name == user.name
@@ -38,8 +38,8 @@ def test_create_user(user_repository, user):
 
 
 @pytest.mark.integration()
-def test_get_user_by_id(user_repository, persisted_user, user):
-    found_user = user_repository.get_by_id(persisted_user.id)
+async def test_get_user_by_id(user_repository, persisted_user, user):
+    found_user = await user_repository.get_by_id(persisted_user.id)
 
     assert isinstance(found_user, User)
     assert found_user.name == user.name
@@ -50,8 +50,8 @@ def test_get_user_by_id(user_repository, persisted_user, user):
 
 
 @pytest.mark.integration()
-def test_get_user_by_email(user_repository, persisted_user, user):
-    found_user = user_repository.get_by_email(persisted_user.email)
+async def test_get_user_by_email(user_repository, persisted_user, user):
+    found_user = await user_repository.get_by_email(persisted_user.email)
 
     assert isinstance(found_user, User)
     assert found_user.id == persisted_user.id
@@ -63,12 +63,12 @@ def test_get_user_by_email(user_repository, persisted_user, user):
 
 
 @pytest.mark.integration()
-def test_update_user_by_id(user_repository, persisted_user):
+async def test_update_user_by_id(user_repository, persisted_user):
     persisted_user.name = "Luana"
     persisted_user.email = "luana@gmail.com"
     persisted_user.role = UserRole.ADMIN
 
-    updated_user = user_repository.update_by_id(persisted_user)
+    updated_user = await user_repository.update_by_id(persisted_user)
 
     assert isinstance(updated_user, User)
     assert updated_user.id == persisted_user.id
@@ -78,20 +78,20 @@ def test_update_user_by_id(user_repository, persisted_user):
 
 
 @pytest.mark.integration()
-def test_delete_user_by_id(user_repository, persisted_user):
-    is_deleted = user_repository.delete_by_id(persisted_user.id)
+async def test_delete_user_by_id(user_repository, persisted_user):
+    is_deleted = await user_repository.delete_by_id(persisted_user.id)
 
     assert is_deleted
 
 
 @pytest.mark.integration()
-def test_get_all_users_empty(user_repository):
-    users = user_repository.get_all()
+async def test_get_all_users_empty(user_repository):
+    users = await user_repository.get_all()
     assert users == []
 
 
 @pytest.mark.integration()
-def test_get_all_users(user_repository, user):
+async def test_get_all_users(user_repository, user):
     second_unique = str(uuid.uuid4())
     second_user = UserModel(
         name="Luana",
@@ -100,10 +100,10 @@ def test_get_all_users(user_repository, user):
         password="senha_segura_123",
         role=UserRole.ADMIN,
     )
-    user_repository.create(user)
-    user_repository.create(second_user)
+    await user_repository.awaitcreate(user)
+    await user_repository.create(second_user)
 
-    users = user_repository.get_all()
+    users = await user_repository.get_all()
 
     assert isinstance(users, list)
     assert all(isinstance(user, User) for user in users)
@@ -114,20 +114,20 @@ def test_get_all_users(user_repository, user):
 
 
 @pytest.mark.integration()
-def test_get_user_by_id_not_found(user_repository):
+async def test_get_user_by_id_not_found(user_repository):
     non_existent_id = uuid.uuid4()
-    found_user = user_repository.get_by_id(non_existent_id)
+    found_user = await user_repository.get_by_id(non_existent_id)
     assert found_user is None
 
 
 @pytest.mark.integration()
-def test_get_user_by_email_not_found(user_repository):
-    found_user = user_repository.get_by_email("nao_existe@gmail.com")
+async def test_get_user_by_email_not_found(user_repository):
+    found_user = await user_repository.get_by_email("nao_existe@gmail.com")
     assert found_user is None
 
 
 @pytest.mark.integration()
-def test_delete_user_by_id_not_found(user_repository):
+async def test_delete_user_by_id_not_found(user_repository):
     non_existent_id = uuid.uuid4()
-    is_deleted = user_repository.delete_by_id(non_existent_id)
+    is_deleted = await user_repository.delete_by_id(non_existent_id)
     assert not is_deleted
