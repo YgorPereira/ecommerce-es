@@ -100,7 +100,7 @@ async def test_get_all_users(user_repository, user):
         password="senha_segura_123",
         role=UserRole.ADMIN,
     )
-    await user_repository.awaitcreate(user)
+    await user_repository.create(user)
     await user_repository.create(second_user)
 
     users = await user_repository.get_all()
