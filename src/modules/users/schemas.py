@@ -13,7 +13,7 @@ class BaseUserSchema(BaseModel):
 
 
 class CreateUserSchema(BaseUserSchema):
-    cpf: str = Field(min_length=11, max_length=11)
+    cpf: str = Field(min_length=11, max_length=14)
     password: str = Field(min_length=8)
 
     @field_validator("cpf")
