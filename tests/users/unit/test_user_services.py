@@ -25,7 +25,7 @@ def user():
     unique = str(uuid.uuid4())
     return User(
         name="Ygor",
-        cpf=unique[:11],
+        cpf='52998224725',
         email=f"{unique}@gmail.com",
         password="134fda1sd1ADFADF1",
         role=UserRole.COMMON,
@@ -38,7 +38,7 @@ def create_schema():
     unique = str(uuid.uuid4())
     return CreateUserSchema(
         name="Ygor",
-        cpf=unique[:11],
+        cpf='52998224725',
         email=f"{unique}@gmail.com",
         password="134fda1sd1ADFADF1",
         role=UserRole.COMMON,
