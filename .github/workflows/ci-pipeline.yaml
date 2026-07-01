@@ -51,6 +51,7 @@ jobs:
       POSTGRES_HOST: localhost
       POSTGRES_PORT: 5432
       POSTGRES_DB: ecommerce
+      SECRET_KEY: ${{ secrets.SECRET_KEY }}
 
     services:
       postgres:
@@ -89,6 +90,7 @@ jobs:
       POSTGRES_HOST: localhost
       POSTGRES_PORT: 5432
       POSTGRES_DB: ecommerce
+      SECRET_KEY: ${{ secrets.SECRET_KEY }}
 
     steps:
       - uses: actions/checkout@v4
@@ -113,6 +115,7 @@ jobs:
       POSTGRES_HOST: localhost
       POSTGRES_PORT: 5432
       POSTGRES_DB: ecommerce
+      SECRET_KEY: ${{ secrets.SECRET_KEY }}
 
     services:
       postgres:
@@ -151,6 +154,7 @@ jobs:
       POSTGRES_HOST: localhost
       POSTGRES_PORT: 5432
       POSTGRES_DB: ecommerce
+      SECRET_KEY: ${{ secrets.SECRET_KEY }}
 
     services:
       postgres:
