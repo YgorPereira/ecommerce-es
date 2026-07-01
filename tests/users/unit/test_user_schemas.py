@@ -5,10 +5,10 @@ from src.modules.users.enums.role import UserRole
 from src.modules.users.schemas import CreateUserSchema, UpdateUserSchema
 import uuid
 
-
 # ---------------------------------------------------------------------------
 # CreateUserSchema — CPF
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit()
 def test_create_schema_cpf_valid():
@@ -88,6 +88,7 @@ def test_create_schema_cpf_with_letters():
 # CreateUserSchema — Email
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit()
 def test_create_schema_email_valid():
     schema = CreateUserSchema(
@@ -140,6 +141,7 @@ def test_create_schema_email_empty():
 # CreateUserSchema — Password
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit()
 def test_create_schema_password_valid():
     schema = CreateUserSchema(
@@ -180,6 +182,7 @@ def test_create_schema_password_empty():
 # CreateUserSchema — Name
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit()
 def test_create_schema_name_valid():
     schema = CreateUserSchema(
@@ -219,6 +222,7 @@ def test_create_schema_name_empty():
 # ---------------------------------------------------------------------------
 # UpdateUserSchema
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit()
 def test_update_schema_valid():

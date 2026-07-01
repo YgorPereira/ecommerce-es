@@ -25,7 +25,7 @@ def user():
     unique = str(uuid.uuid4())
     return User(
         name="Ygor",
-        cpf='52998224725',
+        cpf="52998224725",
         email=f"{unique}@gmail.com",
         password="134fda1sd1ADFADF1",
         role=UserRole.COMMON,
@@ -38,7 +38,7 @@ def create_schema():
     unique = str(uuid.uuid4())
     return CreateUserSchema(
         name="Ygor",
-        cpf='52998224725',
+        cpf="52998224725",
         email=f"{unique}@gmail.com",
         password="134fda1sd1ADFADF1",
         role=UserRole.COMMON,
@@ -123,6 +123,7 @@ async def test_get_user_by_id_not_found(user_service, mock_repository):
 
     mock_repository.get_by_id.assert_called_once_with(non_existent_id)
 
+
 @pytest.mark.unit()
 async def test_get_user_by_email(user_service, mock_repository, user):
     mock_repository.get_by_email.return_value = user
@@ -139,9 +140,10 @@ async def test_get_user_by_email_not_found(user_service, mock_repository):
     mock_repository.get_by_email.return_value = None
 
     with pytest.raises(UserNotFoundException):
-            await user_service.get_user_by_email("nao_existe@gmail.com")
+        await user_service.get_user_by_email("nao_existe@gmail.com")
 
     mock_repository.get_by_email.assert_called_once_with("nao_existe@gmail.com")
+
 
 @pytest.mark.unit()
 async def test_update_user(user_service, mock_repository, user, update_schema):
@@ -169,10 +171,11 @@ async def test_update_user_not_found(user_service, mock_repository, update_schem
     mock_repository.get_by_id.return_value = None
 
     with pytest.raises(UserNotFoundException):
-            await user_service.update_user(update_schema)
+        await user_service.update_user(update_schema)
 
     mock_repository.get_by_id.assert_called_once()
     mock_repository.update_by_id.assert_not_called()
+
 
 @pytest.mark.unit()
 async def test_delete_user_by_id(user_service, mock_repository, user):
@@ -185,6 +188,7 @@ async def test_delete_user_by_id(user_service, mock_repository, user):
     mock_repository.delete_by_id.assert_called_once_with(user.id)
     assert is_deleted is True
 
+
 @pytest.mark.unit()
 async def test_delete_user_by_id_not_found(user_service, mock_repository):
     non_existent_id = uuid.uuid4()
@@ -192,7 +196,7 @@ async def test_delete_user_by_id_not_found(user_service, mock_repository):
     mock_repository.get_by_id.return_value = None
 
     with pytest.raises(UserNotFoundException):
-            await user_service.delete_user_by_id(non_existent_id)
+        await user_service.delete_user_by_id(non_existent_id)
 
     mock_repository.get_by_id.assert_called_once_with(non_existent_id)
     mock_repository.delete_user_by_id.assert_not_called()

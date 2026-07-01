@@ -45,7 +45,7 @@ async def test_engine(postgres_temp_db):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def db_session(test_engine) -> AsyncSession: # type: ignore
+async def db_session(test_engine) -> AsyncSession:  # type: ignore
     async_session = async_sessionmaker(
         bind=test_engine,
         autoflush=False,

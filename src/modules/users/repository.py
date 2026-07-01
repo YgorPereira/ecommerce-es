@@ -17,7 +17,7 @@ class UserRepository:
         mapped_user = UserMapper.to_model(user)
         self.db_session.add(mapped_user)
         await self.db_session.flush()
-        await  self.db_session.refresh(mapped_user)
+        await self.db_session.refresh(mapped_user)
         return UserMapper.to_entity(mapped_user)
 
     async def get_all(self) -> List[User]:
@@ -35,7 +35,7 @@ class UserRepository:
 
         return UserMapper.to_entity(model)
 
-    async def get_by_email(self, email: str) -> User | None :
+    async def get_by_email(self, email: str) -> User | None:
         query = select(UserModel).where(UserModel.email == email)
 
         result = await self.db_session.scalars(query)
@@ -43,14 +43,14 @@ class UserRepository:
 
         if model is None:
             return None
-        
+
         return UserMapper.to_entity(model)
 
     async def update_by_id(self, user: User) -> User | None:
         model = UserMapper.to_model(user)
         db_user = await self.db_session.merge(model)
 
-        if db_user is None: 
+        if db_user is None:
             return None
 
         await self.db_session.flush()

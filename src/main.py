@@ -8,9 +8,11 @@ from src.shared.exceptions import AppException
 
 app = FastAPI()
 
+
 @app.get("/")
 def read_root():
     return {"Hello": "World"}
+
 
 @app.exception_handler(AppException)
 async def app_exception_handler(request: Request, exc: AppException):
@@ -18,6 +20,7 @@ async def app_exception_handler(request: Request, exc: AppException):
         status_code=exc.status_code,
         content={"detail": exc.message},
     )
+
 
 app.include_router(user_router)
 

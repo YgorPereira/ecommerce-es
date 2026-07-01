@@ -3,8 +3,8 @@ from src.modules.users.models import UserModel
 from src.modules.users.schemas import CreateUserSchema, UpdateUserSchema
 
 
-class UserMapper():
-    
+class UserMapper:
+
     @staticmethod
     def to_model(entity: User) -> UserModel:
         return UserModel(
@@ -26,7 +26,7 @@ class UserMapper():
             password=model.password,
             role=model.role,
         )
-    
+
     @staticmethod
     def from_create_schema(schema: CreateUserSchema) -> User:
         return User(
