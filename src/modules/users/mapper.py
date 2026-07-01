@@ -1,6 +1,6 @@
 from src.modules.users.entity import User
 from src.modules.users.models import UserModel
-from src.modules.users.schemas import CreateUserSchema
+from src.modules.users.schemas import CreateUserSchema, UpdateUserSchema
 
 
 class UserMapper():
@@ -12,8 +12,6 @@ class UserMapper():
             name=entity.name,
             cpf=entity.cpf,
             email=entity.email,
-            # cpf=entity.cpf.value,
-            # email=entity.email.value,
             password=entity.password,
             role=entity.role,
         )

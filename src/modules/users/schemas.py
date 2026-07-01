@@ -45,3 +45,9 @@ class CreateUserSchema(BaseUserSchema):
 
 class UpdateUserSchema(BaseUserSchema):
     id: uuid.UUID
+
+class UserResponseSchema(BaseUserSchema):
+    id: uuid.UUID
+    cpf: str
+    
+    model_config = {"from_attributes": True}
