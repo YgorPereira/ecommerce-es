@@ -1,6 +1,7 @@
 from typing import List
 import uuid
 
+from src.core.security import hash_password
 from src.modules.users.entity import User
 from src.modules.users.exceptions import (
     UserEmailAlreadyExistsException,
@@ -20,6 +21,9 @@ class UserService:
 
         if db_item is not None:
             raise UserEmailAlreadyExistsException()
+        
+        hashed = hash_password(user.password) 
+        user.password = hashed
 
         return await self.repository.create(UserMapper.from_create_schema(user))
 
