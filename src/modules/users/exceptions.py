@@ -1,5 +1,3 @@
-
-
 from src.shared.exceptions import ConflictException, NotFoundException
 
 

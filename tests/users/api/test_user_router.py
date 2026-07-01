@@ -216,7 +216,7 @@ def test_update_user_not_found(client, mock_user_service):
             "cpf": "52998224725",
             "email": "ygor@gmail.com",
             "password": "senha1234",
-            "role": UserRole.COMMON.value
+            "role": UserRole.COMMON.value,
         },
     )
 
