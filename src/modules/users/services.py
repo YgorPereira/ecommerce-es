@@ -21,8 +21,8 @@ class UserService:
 
         if db_item is not None:
             raise UserEmailAlreadyExistsException()
-        
-        hashed = hash_password(user.password) 
+
+        hashed = hash_password(user.password)
         user.password = hashed
 
         return await self.repository.create(UserMapper.from_create_schema(user))

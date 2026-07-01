@@ -18,7 +18,9 @@ class AuthService:
     def __init__(self, user_repository: UserRepository):
         self.user_repository = user_repository
 
-    def _create_token(self, user_id: str, token_type: str, expires_delta: timedelta) -> str:
+    def _create_token(
+        self, user_id: str, token_type: str, expires_delta: timedelta
+    ) -> str:
         expire = datetime.now(timezone.utc) + expires_delta
         return jwt.encode(
             {"sub": user_id, "exp": expire, "type": token_type},
@@ -27,10 +29,14 @@ class AuthService:
         )
 
     def create_access_token(self, user_id: str) -> str:
-        return self._create_token(user_id, "access", timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+        return self._create_token(
+            user_id, "access", timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        )
 
     def create_refresh_token(self, user_id: str) -> str:
-        return self._create_token(user_id, "refresh", timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS))
+        return self._create_token(
+            user_id, "refresh", timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+        )
 
     def decode_token(self, token: str, expected_type: str) -> str:
         try:

@@ -21,7 +21,9 @@ def get_current_user(
     auth_service: AuthService = Depends(get_auth_service),
 ) -> UserModel:
     try:
-        user_id = auth_service.decode_token(credentials.credentials, expected_type="access")
+        user_id = auth_service.decode_token(
+            credentials.credentials, expected_type="access"
+        )
         user = auth_service.user_repository.get_by_id(uuid.UUID(user_id))
         if not user:
             raise ValueError()

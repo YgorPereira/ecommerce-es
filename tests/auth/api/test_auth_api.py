@@ -45,7 +45,11 @@ def authenticated_client(client, user):
 
 @pytest.mark.api
 def test_login_success(client, mock_auth_service, user):
-    mock_auth_service.login.return_value = (user, "access_token_fake", "refresh_token_fake")
+    mock_auth_service.login.return_value = (
+        user,
+        "access_token_fake",
+        "refresh_token_fake",
+    )
 
     response = client.post(
         "/auth/login",
@@ -87,7 +91,11 @@ def test_login_missing_fields(client, mock_auth_service):
 
 @pytest.mark.api
 def test_refresh_success(client, mock_auth_service, user):
-    mock_auth_service.refresh.return_value = (user, "new_access_token", "new_refresh_token")
+    mock_auth_service.refresh.return_value = (
+        user,
+        "new_access_token",
+        "new_refresh_token",
+    )
 
     client.cookies.set("refresh_token", "valid_refresh_token")
     response = client.post("/auth/refresh")

@@ -36,7 +36,9 @@ def user():
 async def test_login_success(auth_service, mock_repository, user):
     mock_repository.get_by_email.return_value = user
 
-    returned_user, access_token, refresh_token = await auth_service.login(user.email, "senha123")
+    returned_user, access_token, refresh_token = await auth_service.login(
+        user.email, "senha123"
+    )
 
     mock_repository.get_by_email.assert_called_once_with(user.email)
     assert isinstance(returned_user, UserModel)
