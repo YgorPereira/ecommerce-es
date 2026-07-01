@@ -30,7 +30,9 @@ async def login(
     auth_service: AuthService = Depends(get_auth_service),
 ):
     try:
-        user, access_token, refresh_token = await auth_service.login(body.email, body.password)
+        user, access_token, refresh_token = await auth_service.login(
+            body.email, body.password
+        )
     except ValueError:
         raise UnauthorizedException("Credenciais inválidas")
 
