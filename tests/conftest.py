@@ -1,10 +1,13 @@
 import pytest
+import pytest_asyncio
+from faker import Faker
 from pytest_postgresql.janitor import DatabaseJanitor
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from src.database.base import Base
 from src.modules.users.repository import UserRepository
+
+fake = Faker("pt_BR")
 
 
 @pytest.fixture(scope="session")
@@ -16,33 +19,51 @@ def postgres_temp_db():
     dbname = "test_ecommerce"
 
     with DatabaseJanitor(
-        user=user, host=host, port=port, dbname=dbname, version=16, password=password
+        user=user,
+        host=host,
+        port=port,
+        dbname=dbname,
+        version=16,
+        password=password,
     ):
-        yield f"postgresql+psycopg://{user}:{password}@{host}:{port}/{dbname}"
+        yield f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{dbname}"
 
 
-@pytest.fixture(scope="session")
-def test_engine(postgres_temp_db):
-    engine = create_engine(postgres_temp_db, echo=False)
-    Base.metadata.create_all(bind=engine)
+@pytest_asyncio.fixture(scope="function")
+async def test_engine(postgres_temp_db):
+    engine = create_async_engine(postgres_temp_db, echo=False)
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
     yield engine
-    Base.metadata.drop_all(bind=engine)
-    engine.dispose()
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+
+    await engine.dispose()
 
 
-@pytest.fixture(scope="function")
-def db_session(test_engine):
-    TestingSessionLocal = sessionmaker(
-        bind=test_engine, autoflush=True, autocommit=False, expire_on_commit=False
+@pytest_asyncio.fixture(scope="function")
+async def db_session(test_engine) -> AsyncSession: # type: ignore
+    async_session = async_sessionmaker(
+        bind=test_engine,
+        autoflush=False,
+        autocommit=False,
+        expire_on_commit=False,
+        class_=AsyncSession,
     )
-    session = TestingSessionLocal()
 
-    yield session
-
-    session.rollback()
-    session.close()
+    async with async_session() as session:
+        yield session
+        await session.rollback()
 
 
 @pytest.fixture(scope="function")
 def user_repository(db_session):
     return UserRepository(db_session)
+
+
+@pytest.fixture(scope="session")
+def faker():
+    return fake
