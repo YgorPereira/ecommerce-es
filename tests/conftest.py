@@ -25,7 +25,6 @@ def postgres_temp_db():
         dbname=dbname,
         version=16,
         password=password,
-        drop_on_error=True,
     ):
         yield f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{dbname}"
 
