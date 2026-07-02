@@ -6,7 +6,8 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str
     POSTGRES_HOST: str
     POSTGRES_PORT: int
-    POSTGRES_DB: str
+    POSTGRES_DB: str = "ecommerce"
+    SECRET_KEY: str
 
     model_config = SettingsConfigDict(
         env_file=".env",
