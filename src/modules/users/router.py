@@ -5,6 +5,9 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from src.database.session import get_db
+from src.modules.auth.dependencies import get_current_user
+from src.modules.auth.permissions import require_admin
+from src.modules.users.entity import User
 from src.modules.users.repository import UserRepository
 from src.modules.users.schemas import (
     CreateUserSchema,
@@ -12,6 +15,7 @@ from src.modules.users.schemas import (
     UserResponseSchema,
 )
 from src.modules.users.services import UserService
+from src.shared.exceptions import UnauthorizedException
 
 user_router = APIRouter(
     prefix="/users",
@@ -38,55 +42,51 @@ async def create_user(
     return await service.create_user(user)
 
 
-@user_router.get(
-    "",
-    response_model=List[UserResponseSchema],
-)
+@user_router.get("", response_model=List[UserResponseSchema])
 async def get_all_users(
     service: UserService = Depends(get_user_service),
+    _: User = Depends(require_admin),
 ):
     return await service.get_all_users()
 
 
-@user_router.get(
-    "/{user_id}",
-    response_model=UserResponseSchema,
-)
+@user_router.get("/{user_id}", response_model=UserResponseSchema)
 async def get_user_by_id(
     user_id: UUID,
     service: UserService = Depends(get_user_service),
+    current_user: User = Depends(get_current_user),
 ):
+    if not current_user.is_admin() and current_user.id != user_id:
+        raise UnauthorizedException("Acesso negado")
     return await service.get_user_by_id(user_id)
 
 
-@user_router.get(
-    "/email/{email}",
-    response_model=UserResponseSchema,
-)
+@user_router.get("/email/{email}", response_model=UserResponseSchema)
 async def get_user_by_email(
     email: str,
     service: UserService = Depends(get_user_service),
+    current_user: User = Depends(get_current_user),
 ):
+    if not current_user.is_admin() and current_user.email != email:
+        raise UnauthorizedException("Acesso negado")
     return await service.get_user_by_email(email)
 
 
-@user_router.put(
-    "",
-    response_model=UserResponseSchema,
-)
+@user_router.put("", response_model=UserResponseSchema)
 async def update_user(
     user: UpdateUserSchema,
     service: UserService = Depends(get_user_service),
+    current_user: User = Depends(get_current_user),
 ):
+    if not current_user.is_admin() and current_user.id != user.id:
+        raise UnauthorizedException("Acesso negado")
     return await service.update_user(user)
 
 
-@user_router.delete(
-    "/{user_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-)
+@user_router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(
     user_id: UUID,
     service: UserService = Depends(get_user_service),
+    _: User = Depends(require_admin),
 ):
     await service.delete_user_by_id(user_id)
