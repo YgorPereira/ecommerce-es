@@ -2,7 +2,10 @@ from typing import List
 import uuid
 
 from src.modules.products.entity import Product
-from src.modules.products.exceptions import ProductNotFoundException
+from src.modules.products.exceptions import (
+    ProductNameAlreadyExistsException,
+    ProductNotFoundException,
+)
 from src.modules.products.mapper import ProductMapper
 from src.modules.products.repository import ProductRepository
 from src.modules.products.schemas import CreateProductSchema, UpdateProductSchema
@@ -13,6 +16,11 @@ class ProductService:
         self.repository = repository
 
     async def create_product(self, product: CreateProductSchema) -> Product:
+        db_item = await self.repository.get_by_name(product.name)
+
+        if db_item is not None:
+            raise ProductNameAlreadyExistsException()
+
         return await self.repository.create(ProductMapper.from_create_schema(product))
 
     async def get_all_products(self) -> List[Product]:
@@ -34,6 +42,11 @@ class ProductService:
 
         if db_item is None:
             raise ProductNotFoundException()
+
+        existing = await self.repository.get_by_name(product.name)
+
+        if existing is not None and existing.id != product.id:
+            raise ProductNameAlreadyExistsException()
 
         return await self.repository.update_by_id(product)
 
