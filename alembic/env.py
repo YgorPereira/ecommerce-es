@@ -8,6 +8,7 @@ from alembic import context
 from src.core.settings import settings
 from src.database.base import Base
 from src.modules.addresses.models import AddressModel
+from src.modules.carts.models import CartModel
 from src.modules.categories.models import CategoryModel
 from src.modules.coupons.models import CouponModel
 from src.modules.inventories.models import InventoryModel
