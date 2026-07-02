@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from src.modules.addresses.router import address_router
 from src.modules.categories.router import category_router
 from src.modules.coupons.router import coupon_router
 from src.modules.inventories.router import inventory_router
@@ -31,6 +32,7 @@ app.include_router(product_router)
 app.include_router(category_router)
 app.include_router(coupon_router)
 app.include_router(inventory_router)
+app.include_router(address_router)
 app.include_router(auth_router)
 
 if __name__ == "__main__":
