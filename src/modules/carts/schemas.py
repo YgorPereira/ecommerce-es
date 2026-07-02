@@ -22,3 +22,7 @@ class CartResponseSchema(BaseCartSchema):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class CheckoutSchema(BaseModel):
+    address_id: uuid.UUID

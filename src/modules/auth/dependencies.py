@@ -16,7 +16,7 @@ def get_auth_service(db: Session = Depends(get_db)) -> AuthService:
     return AuthService(UserRepository(db))
 
 
-def get_current_user(
+async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     auth_service: AuthService = Depends(get_auth_service),
 ) -> UserModel:
@@ -24,7 +24,7 @@ def get_current_user(
         user_id = auth_service.decode_token(
             credentials.credentials, expected_type="access"
         )
-        user = auth_service.user_repository.get_by_id(uuid.UUID(user_id))
+        user = await auth_service.user_repository.get_by_id(uuid.UUID(user_id))
         if not user:
             raise ValueError()
     except ValueError:

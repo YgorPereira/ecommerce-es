@@ -92,6 +92,27 @@ def test_get_order_by_id_not_found(client, mock_order_service):
 
 
 @pytest.mark.api
+def test_calculate_order_total(client, mock_order_service, order):
+    order.total_amount = 220.0
+    mock_order_service.calculate_order_total.return_value = order
+
+    response = client.post(f"/orders/{order.id}/calculate-total")
+
+    assert response.status_code == 200
+    assert response.json()["total_amount"] == 220.0
+    mock_order_service.calculate_order_total.assert_awaited_once_with(order.id)
+
+
+@pytest.mark.api
+def test_calculate_order_total_not_found(client, mock_order_service):
+    mock_order_service.calculate_order_total.side_effect = OrderNotFoundException()
+
+    response = client.post(f"/orders/{uuid.uuid4()}/calculate-total")
+
+    assert response.status_code == 404
+
+
+@pytest.mark.api
 def test_get_orders_by_user_id(client, mock_order_service, order):
     mock_order_service.get_orders_by_user_id.return_value = [order]
 

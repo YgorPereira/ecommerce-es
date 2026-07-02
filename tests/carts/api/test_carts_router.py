@@ -9,8 +9,10 @@ from src.main import app
 from src.modules.cart_items.entity import CartItem
 from src.modules.cart_items.router import get_cart_item_service
 from src.modules.carts.entity import Cart
-from src.modules.carts.exceptions import CartNotFoundException
-from src.modules.carts.router import get_cart_service
+from src.modules.carts.exceptions import CartNotFoundException, EmptyCartException
+from src.modules.carts.router import get_cart_service, get_checkout_service
+from src.modules.inventories.exceptions import InsufficientStockException
+from src.modules.orders.entity import Order
 
 
 @pytest.fixture
@@ -30,6 +32,14 @@ def mock_cart_service():
 def mock_cart_item_service():
     service = AsyncMock()
     app.dependency_overrides[get_cart_item_service] = lambda: service
+    yield service
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def mock_checkout_service():
+    service = AsyncMock()
+    app.dependency_overrides[get_checkout_service] = lambda: service
     yield service
     app.dependency_overrides.clear()
 
@@ -209,3 +219,63 @@ def test_get_cart_items_cart_not_found(
 
     assert response.status_code == 404
     mock_cart_item_service.get_cart_items_by_cart_id.assert_not_awaited()
+
+
+@pytest.mark.api
+def test_checkout(client, mock_checkout_service, cart):
+    order = Order(
+        user_id=cart.user_id,
+        address_id=uuid.uuid4(),
+        total_amount=200.0,
+        status="pending",
+        created_at=datetime.now(timezone.utc),
+        id=uuid.uuid4(),
+    )
+    mock_checkout_service.checkout.return_value = order
+
+    response = client.post(
+        f"/carts/{cart.id}/checkout",
+        json={"address_id": str(order.address_id)},
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["id"] == str(order.id)
+    assert body["total_amount"] == 200.0
+    mock_checkout_service.checkout.assert_awaited_once_with(cart.id, order.address_id)
+
+
+@pytest.mark.api
+def test_checkout_empty_cart(client, mock_checkout_service, cart):
+    mock_checkout_service.checkout.side_effect = EmptyCartException()
+
+    response = client.post(
+        f"/carts/{cart.id}/checkout",
+        json={"address_id": str(uuid.uuid4())},
+    )
+
+    assert response.status_code == 400
+
+
+@pytest.mark.api
+def test_checkout_insufficient_stock(client, mock_checkout_service, cart):
+    mock_checkout_service.checkout.side_effect = InsufficientStockException()
+
+    response = client.post(
+        f"/carts/{cart.id}/checkout",
+        json={"address_id": str(uuid.uuid4())},
+    )
+
+    assert response.status_code == 409
+
+
+@pytest.mark.api
+def test_checkout_cart_not_found(client, mock_checkout_service):
+    mock_checkout_service.checkout.side_effect = CartNotFoundException()
+
+    response = client.post(
+        f"/carts/{uuid.uuid4()}/checkout",
+        json={"address_id": str(uuid.uuid4())},
+    )
+
+    assert response.status_code == 404
