@@ -4,7 +4,10 @@ from unittest.mock import AsyncMock
 import pytest
 
 from src.modules.products.entity import Product
-from src.modules.products.exceptions import ProductNotFoundException
+from src.modules.products.exceptions import (
+    ProductNameAlreadyExistsException,
+    ProductNotFoundException,
+)
 from src.modules.products.schemas import CreateProductSchema, UpdateProductSchema
 from src.modules.products.services import ProductService
 
@@ -53,6 +56,7 @@ def update_schema(product):
 
 @pytest.mark.unit()
 async def test_create_product(product_service, mock_repository, create_schema, product):
+    mock_repository.get_by_name.return_value = None
     mock_repository.create.return_value = product
 
     created_product = await product_service.create_product(create_schema)
@@ -61,6 +65,19 @@ async def test_create_product(product_service, mock_repository, create_schema, p
     assert isinstance(created_product, Product)
     assert created_product.name == product.name
     assert created_product.price == product.price
+
+
+@pytest.mark.unit()
+async def test_create_product_name_already_exists(
+    product_service, mock_repository, create_schema, product
+):
+    mock_repository.get_by_name.return_value = product
+
+    with pytest.raises(ProductNameAlreadyExistsException):
+        await product_service.create_product(create_schema)
+
+    mock_repository.get_by_name.assert_called_once_with(create_schema.name)
+    mock_repository.create.assert_not_called()
 
 
 @pytest.mark.unit()
@@ -136,6 +153,7 @@ async def test_update_product(product_service, mock_repository, product, update_
         id=product.id,
     )
     mock_repository.get_by_id.return_value = product
+    mock_repository.get_by_name.return_value = None
     mock_repository.update_by_id.return_value = updated
 
     result = await product_service.update_product(update_schema)
@@ -147,7 +165,29 @@ async def test_update_product(product_service, mock_repository, product, update_
 
 
 @pytest.mark.unit()
-async def test_update_product_not_found(product_service, mock_repository, update_schema):
+async def test_update_product_name_already_exists(
+    product_service, mock_repository, product, update_schema
+):
+    other_product = Product(
+        name=update_schema.name,
+        price=100.0,
+        description="Outro produto",
+        category_id=uuid.uuid4(),
+        id=uuid.uuid4(),
+    )
+    mock_repository.get_by_id.return_value = product
+    mock_repository.get_by_name.return_value = other_product
+
+    with pytest.raises(ProductNameAlreadyExistsException):
+        await product_service.update_product(update_schema)
+
+    mock_repository.update_by_id.assert_not_called()
+
+
+@pytest.mark.unit()
+async def test_update_product_not_found(
+    product_service, mock_repository, update_schema
+):
     mock_repository.get_by_id.return_value = None
 
     with pytest.raises(ProductNotFoundException):
