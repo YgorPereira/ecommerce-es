@@ -5,6 +5,8 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from src.database.session import get_db
+from src.modules.coupons.repository import CouponRepository
+from src.modules.order_items.repository import OrderItemRepository
 from src.modules.orders.repository import OrderRepository
 from src.modules.orders.schemas import (
     CreateOrderSchema,
@@ -23,7 +25,11 @@ def get_order_service(
     db: Session = Depends(get_db),
 ) -> OrderService:
     repository = OrderRepository(db)
-    return OrderService(repository)
+    return OrderService(
+        repository,
+        OrderItemRepository(db),
+        CouponRepository(db),
+    )
 
 
 @order_router.post(
@@ -57,6 +63,17 @@ async def get_order_by_id(
     service: OrderService = Depends(get_order_service),
 ):
     return await service.get_order_by_id(order_id)
+
+
+@order_router.post(
+    "/{order_id}/calculate-total",
+    response_model=OrderResponseSchema,
+)
+async def calculate_order_total(
+    order_id: UUID,
+    service: OrderService = Depends(get_order_service),
+):
+    return await service.calculate_order_total(order_id)
 
 
 @order_router.get(

@@ -7,6 +7,9 @@ from src.modules.payments.exceptions import (
     PaymentGatewayException,
     PaymentNotFoundException,
 )
+from src.modules.orders.entity import Order
+from src.modules.orders.repository import OrderRepository
+from src.modules.orders.services import PAID_ORDER_STATUS
 from src.modules.payments.gateway import (
     PaymentGateway,
     PaymentGatewayError,
@@ -18,11 +21,19 @@ from src.modules.payments.schemas import (
     UpdatePaymentSchema,
 )
 
+PAID_PAYMENT_STATUS = "paid"
+
 
 class PaymentService:
-    def __init__(self, repository: PaymentRepository, gateway: PaymentGateway):
+    def __init__(
+        self,
+        repository: PaymentRepository,
+        gateway: PaymentGateway,
+        order_repository: OrderRepository,
+    ):
         self.repository = repository
         self.gateway = gateway
+        self.order_repository = order_repository
 
     async def create_payment(self, payment: CreatePaymentSchema) -> Payment:
         """Inicia o pagamento no gateway e persiste o registro local.
@@ -62,15 +73,40 @@ class PaymentService:
         if db_item is None:
             raise PaymentNotFoundException()
 
-        return await self.repository.update_by_id(
+        new_status = map_gateway_status(gateway_status)
+
+        updated = await self.repository.update_by_id(
             Payment(
                 id=db_item.id,
                 order_id=db_item.order_id,
                 amount=db_item.amount,
                 method=db_item.method,
-                status=map_gateway_status(gateway_status),
+                status=new_status,
                 gateway_reference=reference,
                 processed_at=datetime.now(timezone.utc),
+            )
+        )
+
+        if new_status == PAID_PAYMENT_STATUS:
+            await self._mark_order_paid(db_item.order_id)
+
+        return updated
+
+    async def _mark_order_paid(self, order_id: uuid.UUID) -> None:
+        order = await self.order_repository.get_by_id(order_id)
+
+        if order is None:
+            return
+
+        await self.order_repository.update_by_id(
+            Order(
+                id=order.id,
+                user_id=order.user_id,
+                address_id=order.address_id,
+                coupon_id=order.coupon_id,
+                total_amount=order.total_amount,
+                status=PAID_ORDER_STATUS,
+                created_at=order.created_at,
             )
         )
 

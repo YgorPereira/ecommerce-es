@@ -1,8 +1,10 @@
 import uuid
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock
 
 import pytest
 
+from src.modules.orders.entity import Order
 from src.modules.payments.entity import Payment
 from src.modules.payments.exceptions import (
     PaymentGatewayException,
@@ -31,8 +33,17 @@ def mock_gateway():
 
 
 @pytest.fixture
-def payment_service(mock_repository, mock_gateway):
-    return PaymentService(repository=mock_repository, gateway=mock_gateway)
+def mock_order_repository():
+    return AsyncMock()
+
+
+@pytest.fixture
+def payment_service(mock_repository, mock_gateway, mock_order_repository):
+    return PaymentService(
+        repository=mock_repository,
+        gateway=mock_gateway,
+        order_repository=mock_order_repository,
+    )
 
 
 @pytest.fixture
@@ -143,6 +154,40 @@ async def test_process_webhook_not_found(payment_service, mock_repository):
         await payment_service.process_webhook("unknown", "approved")
 
     mock_repository.update_by_id.assert_not_called()
+
+
+@pytest.mark.unit()
+async def test_process_webhook_marks_order_paid(
+    payment_service, mock_repository, mock_order_repository, payment
+):
+    mock_repository.get_by_reference.return_value = payment
+    mock_repository.update_by_id.side_effect = _echo
+    mock_order_repository.get_by_id.return_value = Order(
+        user_id=uuid.uuid4(),
+        address_id=uuid.uuid4(),
+        total_amount=250.0,
+        status="pending",
+        created_at=datetime.now(timezone.utc),
+        id=payment.order_id,
+    )
+
+    await payment_service.process_webhook("mp-123", "approved")
+
+    mock_order_repository.update_by_id.assert_awaited_once()
+    updated_order = mock_order_repository.update_by_id.call_args.args[0]
+    assert updated_order.status == "paid"
+
+
+@pytest.mark.unit()
+async def test_process_webhook_failed_does_not_pay_order(
+    payment_service, mock_repository, mock_order_repository, payment
+):
+    mock_repository.get_by_reference.return_value = payment
+    mock_repository.update_by_id.side_effect = _echo
+
+    await payment_service.process_webhook("mp-123", "rejected")
+
+    mock_order_repository.update_by_id.assert_not_awaited()
 
 
 @pytest.mark.unit()

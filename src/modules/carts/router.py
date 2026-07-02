@@ -5,16 +5,25 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from src.database.session import get_db
+from src.modules.cart_items.repository import CartItemRepository
 from src.modules.cart_items.router import get_cart_item_service
 from src.modules.cart_items.schemas import CartItemResponseSchema
 from src.modules.cart_items.services import CartItemService
+from src.modules.carts.checkout import CheckoutService
 from src.modules.carts.repository import CartRepository
 from src.modules.carts.schemas import (
     CreateCartSchema,
     UpdateCartSchema,
     CartResponseSchema,
+    CheckoutSchema,
 )
 from src.modules.carts.services import CartService
+from src.modules.coupons.repository import CouponRepository
+from src.modules.inventories.repository import InventoryRepository
+from src.modules.order_items.repository import OrderItemRepository
+from src.modules.orders.repository import OrderRepository
+from src.modules.orders.schemas import OrderResponseSchema
+from src.modules.products.repository import ProductRepository
 
 cart_router = APIRouter(
     prefix="/carts",
@@ -27,6 +36,20 @@ def get_cart_service(
 ) -> CartService:
     repository = CartRepository(db)
     return CartService(repository)
+
+
+def get_checkout_service(
+    db: Session = Depends(get_db),
+) -> CheckoutService:
+    return CheckoutService(
+        CartRepository(db),
+        CartItemRepository(db),
+        ProductRepository(db),
+        InventoryRepository(db),
+        CouponRepository(db),
+        OrderRepository(db),
+        OrderItemRepository(db),
+    )
 
 
 @cart_router.post(
@@ -84,6 +107,19 @@ async def get_cart_items(
 ):
     await service.get_cart_by_id(cart_id)
     return await cart_item_service.get_cart_items_by_cart_id(cart_id)
+
+
+@cart_router.post(
+    "/{cart_id}/checkout",
+    response_model=OrderResponseSchema,
+    status_code=status.HTTP_201_CREATED,
+)
+async def checkout(
+    cart_id: UUID,
+    payload: CheckoutSchema,
+    service: CheckoutService = Depends(get_checkout_service),
+):
+    return await service.checkout(cart_id, payload.address_id)
 
 
 @cart_router.put(

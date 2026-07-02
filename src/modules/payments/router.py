@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from src.database.session import get_db
+from src.modules.orders.repository import OrderRepository
 from src.modules.payments.gateway import build_payment_gateway
 from src.modules.payments.repository import PaymentRepository
 from src.modules.payments.schemas import (
@@ -25,7 +26,11 @@ def get_payment_service(
     db: Session = Depends(get_db),
 ) -> PaymentService:
     repository = PaymentRepository(db)
-    return PaymentService(repository, build_payment_gateway())
+    return PaymentService(
+        repository,
+        build_payment_gateway(),
+        OrderRepository(db),
+    )
 
 
 @payment_router.post(
