@@ -35,6 +35,15 @@ class ProductRepository:
 
         return ProductMapper.to_entity(model)
 
+    async def get_by_name(self, name: str) -> Product | None:
+        query = select(ProductModel).where(ProductModel.name == name)
+        model = await self.db_session.scalar(query)
+
+        if model is None:
+            return None
+
+        return ProductMapper.to_entity(model)
+
     async def get_by_category_id(self, category_id: uuid.UUID) -> List[Product]:
         query = select(ProductModel).where(ProductModel.category_id == category_id)
         result = await self.db_session.scalars(query)

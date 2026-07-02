@@ -1,10 +1,14 @@
 import uuid
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Float, ForeignKey, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.database.base import Base
 from src.database.idmixin import IdMixin
+
+if TYPE_CHECKING:
+    from src.modules.categories.models import CategoryModel
 
 
 class ProductModel(Base, IdMixin):
@@ -14,3 +18,5 @@ class ProductModel(Base, IdMixin):
     price: Mapped[float] = mapped_column(Float)
     description: Mapped[str] = mapped_column(String(255))
     category_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("categories.id"))
+
+    category: Mapped["CategoryModel"] = relationship(back_populates="products")
