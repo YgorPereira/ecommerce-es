@@ -3,7 +3,6 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock
 
 import pytest
-from fastapi.testclient import TestClient
 
 from src.main import app
 from src.modules.coupons.entity import Coupon
@@ -12,16 +11,11 @@ from src.modules.coupons.router import get_coupon_service
 
 
 @pytest.fixture
-def client():
-    return TestClient(app)
-
-
-@pytest.fixture
 def mock_coupon_service():
     service = AsyncMock()
     app.dependency_overrides[get_coupon_service] = lambda: service
     yield service
-    app.dependency_overrides.clear()
+    app.dependency_overrides.pop(get_coupon_service, None)
 
 
 @pytest.fixture
@@ -45,10 +39,10 @@ def _payload():
 
 
 @pytest.mark.api
-def test_create_coupon(client, mock_coupon_service, coupon):
+def test_create_coupon(admin_client, mock_coupon_service, coupon):
     mock_coupon_service.create_coupon.return_value = coupon
 
-    response = client.post("/coupons", json=_payload())
+    response = admin_client.post("/coupons", json=_payload())
 
     assert response.status_code == 201
 
@@ -61,11 +55,11 @@ def test_create_coupon(client, mock_coupon_service, coupon):
 
 
 @pytest.mark.api
-def test_create_coupon_invalid_percentage(client):
+def test_create_coupon_invalid_percentage(admin_client):
     payload = _payload()
     payload["discount_percentage"] = 150.0
 
-    response = client.post("/coupons", json=payload)
+    response = admin_client.post("/coupons", json=payload)
 
     assert response.status_code == 422
 
@@ -112,44 +106,44 @@ def test_get_all_coupons_empty(client, mock_coupon_service):
 
 
 @pytest.mark.api
-def test_update_coupon(client, mock_coupon_service, coupon):
+def test_update_coupon(admin_client, mock_coupon_service, coupon):
     mock_coupon_service.update_coupon.return_value = coupon
 
     payload = _payload()
     payload["id"] = str(coupon.id)
 
-    response = client.put("/coupons", json=payload)
+    response = admin_client.put("/coupons", json=payload)
 
     assert response.status_code == 200
     assert response.json()["id"] == str(coupon.id)
 
 
 @pytest.mark.api
-def test_update_coupon_not_found(client, mock_coupon_service):
+def test_update_coupon_not_found(admin_client, mock_coupon_service):
     mock_coupon_service.update_coupon.side_effect = CouponNotFoundException()
 
     payload = _payload()
     payload["id"] = str(uuid.uuid4())
 
-    response = client.put("/coupons", json=payload)
+    response = admin_client.put("/coupons", json=payload)
 
     assert response.status_code == 404
 
 
 @pytest.mark.api
-def test_delete_coupon(client, mock_coupon_service, coupon):
+def test_delete_coupon(admin_client, mock_coupon_service, coupon):
     mock_coupon_service.delete_coupon_by_id.return_value = True
 
-    response = client.delete(f"/coupons/{coupon.id}")
+    response = admin_client.delete(f"/coupons/{coupon.id}")
 
     assert response.status_code == 204
     mock_coupon_service.delete_coupon_by_id.assert_awaited_once_with(coupon.id)
 
 
 @pytest.mark.api
-def test_delete_coupon_not_found(client, mock_coupon_service):
+def test_delete_coupon_not_found(admin_client, mock_coupon_service):
     mock_coupon_service.delete_coupon_by_id.side_effect = CouponNotFoundException()
 
-    response = client.delete(f"/coupons/{uuid.uuid4()}")
+    response = admin_client.delete(f"/coupons/{uuid.uuid4()}")
 
     assert response.status_code == 404

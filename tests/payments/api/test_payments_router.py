@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from src.core.settings import settings
 from src.main import app
+from src.modules.orders.entity import Order
 from src.modules.payments.entity import Payment
 from src.modules.payments.exceptions import PaymentNotFoundException
 from src.modules.payments.router import get_payment_service
@@ -22,7 +23,7 @@ def mock_payment_service():
     service = AsyncMock()
     app.dependency_overrides[get_payment_service] = lambda: service
     yield service
-    app.dependency_overrides.clear()
+    app.dependency_overrides.pop(get_payment_service, None)
 
 
 @pytest.fixture
@@ -47,10 +48,10 @@ def _payload(payment):
 
 
 @pytest.mark.api
-def test_create_payment(client, mock_payment_service, payment):
+def test_create_payment(authenticated_client, mock_payment_service, payment):
     mock_payment_service.create_payment.return_value = payment
 
-    response = client.post("/payments", json=_payload(payment))
+    response = authenticated_client.post("/payments", json=_payload(payment))
 
     assert response.status_code == 201
 
@@ -64,39 +65,45 @@ def test_create_payment(client, mock_payment_service, payment):
 
 
 @pytest.mark.api
-def test_create_payment_negative_amount(client, payment):
+def test_create_payment_negative_amount(authenticated_client, payment):
     payload = _payload(payment)
     payload["amount"] = -1.0
 
-    response = client.post("/payments", json=payload)
+    response = authenticated_client.post("/payments", json=payload)
 
     assert response.status_code == 422
 
 
 @pytest.mark.api
-def test_get_payment_by_id(client, mock_payment_service, payment):
+def test_get_payment_by_id(authenticated_client, mock_payment_service, payment, user):
+    order = Order(id=payment.order_id, user_id=user.id, address_id=uuid.uuid4(),
+                  total_amount=250.0, status="pending", created_at=datetime.now(timezone.utc))
     mock_payment_service.get_payment_by_id.return_value = payment
+    mock_payment_service.order_repository.get_by_id.return_value = order
 
-    response = client.get(f"/payments/{payment.id}")
+    response = authenticated_client.get(f"/payments/{payment.id}")
 
     assert response.status_code == 200
     assert response.json()["id"] == str(payment.id)
 
 
 @pytest.mark.api
-def test_get_payment_by_id_not_found(client, mock_payment_service):
+def test_get_payment_by_id_not_found(authenticated_client, mock_payment_service):
     mock_payment_service.get_payment_by_id.side_effect = PaymentNotFoundException()
 
-    response = client.get(f"/payments/{uuid.uuid4()}")
+    response = authenticated_client.get(f"/payments/{uuid.uuid4()}")
 
     assert response.status_code == 404
 
 
 @pytest.mark.api
-def test_get_payments_by_order_id(client, mock_payment_service, payment):
+def test_get_payments_by_order_id(authenticated_client, mock_payment_service, payment, user):
+    order = Order(id=payment.order_id, user_id=user.id, address_id=uuid.uuid4(),
+                  total_amount=250.0, status="pending", created_at=datetime.now(timezone.utc))
+    mock_payment_service.order_repository.get_by_id.return_value = order
     mock_payment_service.get_payments_by_order_id.return_value = [payment]
 
-    response = client.get(f"/payments/order/{payment.order_id}")
+    response = authenticated_client.get(f"/payments/order/{payment.order_id}")
 
     assert response.status_code == 200
     body = response.json()
@@ -106,29 +113,27 @@ def test_get_payments_by_order_id(client, mock_payment_service, payment):
 
 
 @pytest.mark.api
-def test_get_all_payments(client, mock_payment_service, payment):
+def test_get_all_payments(admin_client, mock_payment_service, payment):
     mock_payment_service.get_all_payments.return_value = [payment, payment]
 
-    response = client.get("/payments")
+    response = admin_client.get("/payments")
 
     assert response.status_code == 200
-    body = response.json()
-    assert isinstance(body, list)
-    assert len(body) == 2
+    assert len(response.json()) == 2
 
 
 @pytest.mark.api
-def test_get_all_payments_empty(client, mock_payment_service):
+def test_get_all_payments_empty(admin_client, mock_payment_service):
     mock_payment_service.get_all_payments.return_value = []
 
-    response = client.get("/payments")
+    response = admin_client.get("/payments")
 
     assert response.status_code == 200
     assert response.json() == []
 
 
 @pytest.mark.api
-def test_update_payment(client, mock_payment_service, payment):
+def test_update_payment(admin_client, mock_payment_service, payment):
     payment.status = "paid"
     payment.gateway_reference = "ref-123"
     payment.processed_at = datetime.now(timezone.utc)
@@ -139,7 +144,7 @@ def test_update_payment(client, mock_payment_service, payment):
     payload["status"] = "paid"
     payload["gateway_reference"] = "ref-123"
 
-    response = client.put("/payments", json=payload)
+    response = admin_client.put("/payments", json=payload)
 
     assert response.status_code == 200
     body = response.json()
@@ -149,14 +154,14 @@ def test_update_payment(client, mock_payment_service, payment):
 
 
 @pytest.mark.api
-def test_update_payment_not_found(client, mock_payment_service, payment):
+def test_update_payment_not_found(admin_client, mock_payment_service, payment):
     mock_payment_service.update_payment.side_effect = PaymentNotFoundException()
 
     payload = _payload(payment)
     payload["id"] = str(uuid.uuid4())
     payload["status"] = "paid"
 
-    response = client.put("/payments", json=payload)
+    response = admin_client.put("/payments", json=payload)
 
     assert response.status_code == 404
 
@@ -224,19 +229,19 @@ def test_payment_webhook_accepts_correct_secret(
 
 
 @pytest.mark.api
-def test_delete_payment(client, mock_payment_service, payment):
+def test_delete_payment(authenticated_client, mock_payment_service, payment):
     mock_payment_service.delete_payment_by_id.return_value = True
 
-    response = client.delete(f"/payments/{payment.id}")
+    response = authenticated_client.delete(f"/payments/{payment.id}")
 
     assert response.status_code == 204
     mock_payment_service.delete_payment_by_id.assert_awaited_once_with(payment.id)
 
 
 @pytest.mark.api
-def test_delete_payment_not_found(client, mock_payment_service):
+def test_delete_payment_not_found(authenticated_client, mock_payment_service):
     mock_payment_service.delete_payment_by_id.side_effect = PaymentNotFoundException()
 
-    response = client.delete(f"/payments/{uuid.uuid4()}")
+    response = authenticated_client.delete(f"/payments/{uuid.uuid4()}")
 
     assert response.status_code == 404

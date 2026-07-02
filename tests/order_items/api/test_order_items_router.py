@@ -2,7 +2,6 @@ import uuid
 from unittest.mock import AsyncMock
 
 import pytest
-from fastapi.testclient import TestClient
 
 from src.main import app
 from src.modules.order_items.entity import OrderItem
@@ -11,16 +10,11 @@ from src.modules.order_items.router import get_order_item_service
 
 
 @pytest.fixture
-def client():
-    return TestClient(app)
-
-
-@pytest.fixture
 def mock_order_item_service():
     service = AsyncMock()
     app.dependency_overrides[get_order_item_service] = lambda: service
     yield service
-    app.dependency_overrides.clear()
+    app.dependency_overrides.pop(get_order_item_service, None)
 
 
 @pytest.fixture
@@ -44,10 +38,10 @@ def _payload(order_item):
 
 
 @pytest.mark.api
-def test_create_order_item(client, mock_order_item_service, order_item):
+def test_create_order_item(admin_client, mock_order_item_service, order_item):
     mock_order_item_service.create_order_item.return_value = order_item
 
-    response = client.post("/order_items", json=_payload(order_item))
+    response = admin_client.post("/order_items", json=_payload(order_item))
 
     assert response.status_code == 201
 
@@ -60,41 +54,41 @@ def test_create_order_item(client, mock_order_item_service, order_item):
 
 
 @pytest.mark.api
-def test_create_order_item_invalid_quantity(client, order_item):
+def test_create_order_item_invalid_quantity(admin_client, order_item):
     payload = _payload(order_item)
     payload["quantity"] = 0
 
-    response = client.post("/order_items", json=payload)
+    response = admin_client.post("/order_items", json=payload)
 
     assert response.status_code == 422
 
 
 @pytest.mark.api
-def test_get_order_item_by_id(client, mock_order_item_service, order_item):
+def test_get_order_item_by_id(admin_client, mock_order_item_service, order_item):
     mock_order_item_service.get_order_item_by_id.return_value = order_item
 
-    response = client.get(f"/order_items/{order_item.id}")
+    response = admin_client.get(f"/order_items/{order_item.id}")
 
     assert response.status_code == 200
     assert response.json()["id"] == str(order_item.id)
 
 
 @pytest.mark.api
-def test_get_order_item_by_id_not_found(client, mock_order_item_service):
+def test_get_order_item_by_id_not_found(admin_client, mock_order_item_service):
     mock_order_item_service.get_order_item_by_id.side_effect = (
         OrderItemNotFoundException()
     )
 
-    response = client.get(f"/order_items/{uuid.uuid4()}")
+    response = admin_client.get(f"/order_items/{uuid.uuid4()}")
 
     assert response.status_code == 404
 
 
 @pytest.mark.api
-def test_get_order_items_by_order_id(client, mock_order_item_service, order_item):
+def test_get_order_items_by_order_id(admin_client, mock_order_item_service, order_item):
     mock_order_item_service.get_order_items_by_order_id.return_value = [order_item]
 
-    response = client.get(f"/order_items/order/{order_item.order_id}")
+    response = admin_client.get(f"/order_items/order/{order_item.order_id}")
 
     assert response.status_code == 200
     body = response.json()
@@ -104,10 +98,10 @@ def test_get_order_items_by_order_id(client, mock_order_item_service, order_item
 
 
 @pytest.mark.api
-def test_get_all_order_items(client, mock_order_item_service, order_item):
+def test_get_all_order_items(admin_client, mock_order_item_service, order_item):
     mock_order_item_service.get_all_order_items.return_value = [order_item, order_item]
 
-    response = client.get("/order_items")
+    response = admin_client.get("/order_items")
 
     assert response.status_code == 200
     body = response.json()
@@ -116,45 +110,45 @@ def test_get_all_order_items(client, mock_order_item_service, order_item):
 
 
 @pytest.mark.api
-def test_get_all_order_items_empty(client, mock_order_item_service):
+def test_get_all_order_items_empty(admin_client, mock_order_item_service):
     mock_order_item_service.get_all_order_items.return_value = []
 
-    response = client.get("/order_items")
+    response = admin_client.get("/order_items")
 
     assert response.status_code == 200
     assert response.json() == []
 
 
 @pytest.mark.api
-def test_update_order_item(client, mock_order_item_service, order_item):
+def test_update_order_item(admin_client, mock_order_item_service, order_item):
     mock_order_item_service.update_order_item.return_value = order_item
 
     payload = _payload(order_item)
     payload["id"] = str(order_item.id)
 
-    response = client.put("/order_items", json=payload)
+    response = admin_client.put("/order_items", json=payload)
 
     assert response.status_code == 200
     assert response.json()["id"] == str(order_item.id)
 
 
 @pytest.mark.api
-def test_update_order_item_not_found(client, mock_order_item_service, order_item):
+def test_update_order_item_not_found(admin_client, mock_order_item_service, order_item):
     mock_order_item_service.update_order_item.side_effect = OrderItemNotFoundException()
 
     payload = _payload(order_item)
     payload["id"] = str(uuid.uuid4())
 
-    response = client.put("/order_items", json=payload)
+    response = admin_client.put("/order_items", json=payload)
 
     assert response.status_code == 404
 
 
 @pytest.mark.api
-def test_delete_order_item(client, mock_order_item_service, order_item):
+def test_delete_order_item(admin_client, mock_order_item_service, order_item):
     mock_order_item_service.delete_order_item_by_id.return_value = True
 
-    response = client.delete(f"/order_items/{order_item.id}")
+    response = admin_client.delete(f"/order_items/{order_item.id}")
 
     assert response.status_code == 204
     mock_order_item_service.delete_order_item_by_id.assert_awaited_once_with(
@@ -163,11 +157,11 @@ def test_delete_order_item(client, mock_order_item_service, order_item):
 
 
 @pytest.mark.api
-def test_delete_order_item_not_found(client, mock_order_item_service):
+def test_delete_order_item_not_found(admin_client, mock_order_item_service):
     mock_order_item_service.delete_order_item_by_id.side_effect = (
         OrderItemNotFoundException()
     )
 
-    response = client.delete(f"/order_items/{uuid.uuid4()}")
+    response = admin_client.delete(f"/order_items/{uuid.uuid4()}")
 
     assert response.status_code == 404

@@ -5,6 +5,10 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from src.database.session import get_db
+from src.modules.auth.dependencies import get_current_user
+from src.modules.auth.permissions import require_admin
+from src.modules.users.entity import User
+from src.shared.exceptions import UnauthorizedException
 from src.modules.cart_items.repository import CartItemRepository
 from src.modules.cart_items.schemas import (
     CreateCartItemSchema,
@@ -34,6 +38,7 @@ def get_cart_item_service(
 async def create_cart_item(
     cart_item: CreateCartItemSchema,
     service: CartItemService = Depends(get_cart_item_service),
+    current_user: User = Depends(get_current_user),
 ):
     return await service.create_cart_item(cart_item)
 
@@ -44,6 +49,7 @@ async def create_cart_item(
 )
 async def get_all_cart_items(
     service: CartItemService = Depends(get_cart_item_service),
+    _: User = Depends(require_admin),
 ):
     return await service.get_all_cart_items()
 
@@ -77,6 +83,7 @@ async def get_cart_items_by_cart_id(
 async def update_cart_item(
     cart_item: UpdateCartItemSchema,
     service: CartItemService = Depends(get_cart_item_service),
+    current_user: User = Depends(get_current_user),
 ):
     return await service.update_cart_item(cart_item)
 
@@ -88,5 +95,6 @@ async def update_cart_item(
 async def delete_cart_item(
     cart_item_id: UUID,
     service: CartItemService = Depends(get_cart_item_service),
+    current_user: User = Depends(get_current_user),
 ):
     await service.delete_cart_item_by_id(cart_item_id)

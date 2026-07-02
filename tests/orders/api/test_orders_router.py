@@ -3,7 +3,6 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock
 
 import pytest
-from fastapi.testclient import TestClient
 
 from src.main import app
 from src.modules.orders.entity import Order
@@ -12,16 +11,11 @@ from src.modules.orders.router import get_order_service
 
 
 @pytest.fixture
-def client():
-    return TestClient(app)
-
-
-@pytest.fixture
 def mock_order_service():
     service = AsyncMock()
     app.dependency_overrides[get_order_service] = lambda: service
     yield service
-    app.dependency_overrides.clear()
+    app.dependency_overrides.pop(get_order_service, None)
 
 
 @pytest.fixture
@@ -47,10 +41,10 @@ def _payload(order):
 
 
 @pytest.mark.api
-def test_create_order(client, mock_order_service, order):
+def test_create_order(authenticated_client, mock_order_service, order):
     mock_order_service.create_order.return_value = order
 
-    response = client.post("/orders", json=_payload(order))
+    response = authenticated_client.post("/orders", json=_payload(order))
 
     assert response.status_code == 201
 
@@ -63,40 +57,41 @@ def test_create_order(client, mock_order_service, order):
 
 
 @pytest.mark.api
-def test_create_order_negative_total(client, order):
+def test_create_order_negative_total(authenticated_client, order):
     payload = _payload(order)
     payload["total_amount"] = -10.0
 
-    response = client.post("/orders", json=payload)
+    response = authenticated_client.post("/orders", json=payload)
 
     assert response.status_code == 422
 
 
 @pytest.mark.api
-def test_get_order_by_id(client, mock_order_service, order):
+def test_get_order_by_id(authenticated_client, mock_order_service, order, user):
+    order.user_id = user.id
     mock_order_service.get_order_by_id.return_value = order
 
-    response = client.get(f"/orders/{order.id}")
+    response = authenticated_client.get(f"/orders/{order.id}")
 
     assert response.status_code == 200
     assert response.json()["id"] == str(order.id)
 
 
 @pytest.mark.api
-def test_get_order_by_id_not_found(client, mock_order_service):
+def test_get_order_by_id_not_found(authenticated_client, mock_order_service):
     mock_order_service.get_order_by_id.side_effect = OrderNotFoundException()
 
-    response = client.get(f"/orders/{uuid.uuid4()}")
+    response = authenticated_client.get(f"/orders/{uuid.uuid4()}")
 
     assert response.status_code == 404
 
 
 @pytest.mark.api
-def test_calculate_order_total(client, mock_order_service, order):
+def test_calculate_order_total(authenticated_client, mock_order_service, order):
     order.total_amount = 220.0
     mock_order_service.calculate_order_total.return_value = order
 
-    response = client.post(f"/orders/{order.id}/calculate-total")
+    response = authenticated_client.post(f"/orders/{order.id}/calculate-total")
 
     assert response.status_code == 200
     assert response.json()["total_amount"] == 220.0
@@ -104,51 +99,49 @@ def test_calculate_order_total(client, mock_order_service, order):
 
 
 @pytest.mark.api
-def test_calculate_order_total_not_found(client, mock_order_service):
+def test_calculate_order_total_not_found(authenticated_client, mock_order_service):
     mock_order_service.calculate_order_total.side_effect = OrderNotFoundException()
 
-    response = client.post(f"/orders/{uuid.uuid4()}/calculate-total")
+    response = authenticated_client.post(f"/orders/{uuid.uuid4()}/calculate-total")
 
     assert response.status_code == 404
 
 
 @pytest.mark.api
-def test_get_orders_by_user_id(client, mock_order_service, order):
+def test_get_orders_by_user_id(authenticated_client, mock_order_service, order, user):
+    order.user_id = user.id
     mock_order_service.get_orders_by_user_id.return_value = [order]
 
-    response = client.get(f"/orders/user/{order.user_id}")
+    response = authenticated_client.get(f"/orders/user/{user.id}")
 
     assert response.status_code == 200
     body = response.json()
     assert isinstance(body, list)
     assert len(body) == 1
-    assert body[0]["user_id"] == str(order.user_id)
+    assert body[0]["user_id"] == str(user.id)
 
 
 @pytest.mark.api
-def test_get_all_orders(client, mock_order_service, order):
+def test_get_all_orders(admin_client, mock_order_service, order):
     mock_order_service.get_all_orders.return_value = [order, order]
 
-    response = client.get("/orders")
+    response = admin_client.get("/orders")
 
     assert response.status_code == 200
-    body = response.json()
-    assert isinstance(body, list)
-    assert len(body) == 2
+    assert len(response.json()) == 2
 
 
 @pytest.mark.api
-def test_get_all_orders_empty(client, mock_order_service):
+def test_get_all_orders_empty(admin_client, mock_order_service):
     mock_order_service.get_all_orders.return_value = []
 
-    response = client.get("/orders")
+    response = admin_client.get("/orders")
 
     assert response.status_code == 200
     assert response.json() == []
 
-
 @pytest.mark.api
-def test_update_order(client, mock_order_service, order):
+def test_update_order(admin_client, mock_order_service, order):
     order.status = "paid"
     mock_order_service.update_order.return_value = order
 
@@ -156,39 +149,39 @@ def test_update_order(client, mock_order_service, order):
     payload["id"] = str(order.id)
     payload["status"] = "paid"
 
-    response = client.put("/orders", json=payload)
+    response = admin_client.put("/orders", json=payload)
 
     assert response.status_code == 200
     assert response.json()["status"] == "paid"
 
 
 @pytest.mark.api
-def test_update_order_not_found(client, mock_order_service, order):
+def test_update_order_not_found(admin_client, mock_order_service, order):
     mock_order_service.update_order.side_effect = OrderNotFoundException()
 
     payload = _payload(order)
     payload["id"] = str(uuid.uuid4())
     payload["status"] = "paid"
 
-    response = client.put("/orders", json=payload)
+    response = admin_client.put("/orders", json=payload)
 
     assert response.status_code == 404
 
 
 @pytest.mark.api
-def test_delete_order(client, mock_order_service, order):
+def test_delete_order(authenticated_client, mock_order_service, order):
     mock_order_service.delete_order_by_id.return_value = True
 
-    response = client.delete(f"/orders/{order.id}")
+    response = authenticated_client.delete(f"/orders/{order.id}")
 
     assert response.status_code == 204
     mock_order_service.delete_order_by_id.assert_awaited_once_with(order.id)
 
 
 @pytest.mark.api
-def test_delete_order_not_found(client, mock_order_service):
+def test_delete_order_not_found(authenticated_client, mock_order_service):
     mock_order_service.delete_order_by_id.side_effect = OrderNotFoundException()
 
-    response = client.delete(f"/orders/{uuid.uuid4()}")
+    response = authenticated_client.delete(f"/orders/{uuid.uuid4()}")
 
     assert response.status_code == 404

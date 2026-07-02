@@ -5,6 +5,8 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from src.database.session import get_db
+from src.modules.auth.permissions import require_admin
+from src.modules.users.entity import User
 from src.modules.order_items.repository import OrderItemRepository
 from src.modules.order_items.schemas import (
     CreateOrderItemSchema,
@@ -34,6 +36,7 @@ def get_order_item_service(
 async def create_order_item(
     order_item: CreateOrderItemSchema,
     service: OrderItemService = Depends(get_order_item_service),
+    _: User = Depends(require_admin),
 ):
     return await service.create_order_item(order_item)
 
@@ -44,6 +47,7 @@ async def create_order_item(
 )
 async def get_all_order_items(
     service: OrderItemService = Depends(get_order_item_service),
+    _: User = Depends(require_admin),
 ):
     return await service.get_all_order_items()
 
@@ -77,6 +81,7 @@ async def get_order_items_by_order_id(
 async def update_order_item(
     order_item: UpdateOrderItemSchema,
     service: OrderItemService = Depends(get_order_item_service),
+    _: User = Depends(require_admin),
 ):
     return await service.update_order_item(order_item)
 
@@ -88,5 +93,6 @@ async def update_order_item(
 async def delete_order_item(
     order_item_id: UUID,
     service: OrderItemService = Depends(get_order_item_service),
+    _: User = Depends(require_admin),
 ):
     await service.delete_order_item_by_id(order_item_id)

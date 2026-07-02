@@ -2,17 +2,11 @@ import uuid
 from unittest.mock import AsyncMock
 
 import pytest
-from fastapi.testclient import TestClient
 
-from src.main import app
 from src.modules.cart_items.entity import CartItem
 from src.modules.cart_items.exceptions import CartItemNotFoundException
 from src.modules.cart_items.router import get_cart_item_service
-
-
-@pytest.fixture
-def client():
-    return TestClient(app)
+from src.main import app
 
 
 @pytest.fixture
@@ -20,7 +14,7 @@ def mock_cart_item_service():
     service = AsyncMock()
     app.dependency_overrides[get_cart_item_service] = lambda: service
     yield service
-    app.dependency_overrides.clear()
+    app.dependency_overrides.pop(get_cart_item_service, None)
 
 
 @pytest.fixture
@@ -42,10 +36,10 @@ def _payload(cart_item):
 
 
 @pytest.mark.api
-def test_create_cart_item(client, mock_cart_item_service, cart_item):
+def test_create_cart_item(authenticated_client, mock_cart_item_service, cart_item):
     mock_cart_item_service.create_cart_item.return_value = cart_item
 
-    response = client.post("/cart_items", json=_payload(cart_item))
+    response = authenticated_client.post("/cart_items", json=_payload(cart_item))
 
     assert response.status_code == 201
 
@@ -58,39 +52,39 @@ def test_create_cart_item(client, mock_cart_item_service, cart_item):
 
 
 @pytest.mark.api
-def test_create_cart_item_invalid_quantity(client, cart_item):
+def test_create_cart_item_invalid_quantity(authenticated_client, cart_item):
     payload = _payload(cart_item)
     payload["quantity"] = 0
 
-    response = client.post("/cart_items", json=payload)
+    response = authenticated_client.post("/cart_items", json=payload)
 
     assert response.status_code == 422
 
 
 @pytest.mark.api
-def test_get_cart_item_by_id(client, mock_cart_item_service, cart_item):
+def test_get_cart_item_by_id(authenticated_client, mock_cart_item_service, cart_item):
     mock_cart_item_service.get_cart_item_by_id.return_value = cart_item
 
-    response = client.get(f"/cart_items/{cart_item.id}")
+    response = authenticated_client.get(f"/cart_items/{cart_item.id}")
 
     assert response.status_code == 200
     assert response.json()["id"] == str(cart_item.id)
 
 
 @pytest.mark.api
-def test_get_cart_item_by_id_not_found(client, mock_cart_item_service):
+def test_get_cart_item_by_id_not_found(authenticated_client, mock_cart_item_service):
     mock_cart_item_service.get_cart_item_by_id.side_effect = CartItemNotFoundException()
 
-    response = client.get(f"/cart_items/{uuid.uuid4()}")
+    response = authenticated_client.get(f"/cart_items/{uuid.uuid4()}")
 
     assert response.status_code == 404
 
 
 @pytest.mark.api
-def test_get_cart_items_by_cart_id(client, mock_cart_item_service, cart_item):
+def test_get_cart_items_by_cart_id(authenticated_client, mock_cart_item_service, cart_item):
     mock_cart_item_service.get_cart_items_by_cart_id.return_value = [cart_item]
 
-    response = client.get(f"/cart_items/cart/{cart_item.cart_id}")
+    response = authenticated_client.get(f"/cart_items/cart/{cart_item.cart_id}")
 
     assert response.status_code == 200
     body = response.json()
@@ -100,10 +94,10 @@ def test_get_cart_items_by_cart_id(client, mock_cart_item_service, cart_item):
 
 
 @pytest.mark.api
-def test_get_all_cart_items(client, mock_cart_item_service, cart_item):
+def test_get_all_cart_items(admin_client, mock_cart_item_service, cart_item):
     mock_cart_item_service.get_all_cart_items.return_value = [cart_item, cart_item]
 
-    response = client.get("/cart_items")
+    response = admin_client.get("/cart_items")
 
     assert response.status_code == 200
     body = response.json()
@@ -112,56 +106,56 @@ def test_get_all_cart_items(client, mock_cart_item_service, cart_item):
 
 
 @pytest.mark.api
-def test_get_all_cart_items_empty(client, mock_cart_item_service):
+def test_get_all_cart_items_empty(admin_client, mock_cart_item_service):
     mock_cart_item_service.get_all_cart_items.return_value = []
 
-    response = client.get("/cart_items")
+    response = admin_client.get("/cart_items")
 
     assert response.status_code == 200
     assert response.json() == []
 
 
 @pytest.mark.api
-def test_update_cart_item(client, mock_cart_item_service, cart_item):
+def test_update_cart_item(authenticated_client, mock_cart_item_service, cart_item):
     mock_cart_item_service.update_cart_item.return_value = cart_item
 
     payload = _payload(cart_item)
     payload["id"] = str(cart_item.id)
 
-    response = client.put("/cart_items", json=payload)
+    response = authenticated_client.put("/cart_items", json=payload)
 
     assert response.status_code == 200
     assert response.json()["id"] == str(cart_item.id)
 
 
 @pytest.mark.api
-def test_update_cart_item_not_found(client, mock_cart_item_service, cart_item):
+def test_update_cart_item_not_found(authenticated_client, mock_cart_item_service, cart_item):
     mock_cart_item_service.update_cart_item.side_effect = CartItemNotFoundException()
 
     payload = _payload(cart_item)
     payload["id"] = str(uuid.uuid4())
 
-    response = client.put("/cart_items", json=payload)
+    response = authenticated_client.put("/cart_items", json=payload)
 
     assert response.status_code == 404
 
 
 @pytest.mark.api
-def test_delete_cart_item(client, mock_cart_item_service, cart_item):
+def test_delete_cart_item(authenticated_client, mock_cart_item_service, cart_item):
     mock_cart_item_service.delete_cart_item_by_id.return_value = True
 
-    response = client.delete(f"/cart_items/{cart_item.id}")
+    response = authenticated_client.delete(f"/cart_items/{cart_item.id}")
 
     assert response.status_code == 204
     mock_cart_item_service.delete_cart_item_by_id.assert_awaited_once_with(cart_item.id)
 
 
 @pytest.mark.api
-def test_delete_cart_item_not_found(client, mock_cart_item_service):
+def test_delete_cart_item_not_found(authenticated_client, mock_cart_item_service):
     mock_cart_item_service.delete_cart_item_by_id.side_effect = (
         CartItemNotFoundException()
     )
 
-    response = client.delete(f"/cart_items/{uuid.uuid4()}")
+    response = authenticated_client.delete(f"/cart_items/{uuid.uuid4()}")
 
     assert response.status_code == 404

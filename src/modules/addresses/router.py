@@ -5,6 +5,10 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from src.database.session import get_db
+from src.modules.auth.dependencies import get_current_user
+from src.modules.auth.permissions import require_admin
+from src.modules.users.entity import User
+from src.shared.exceptions import UnauthorizedException
 from src.modules.addresses.repository import AddressRepository
 from src.modules.addresses.schemas import (
     CreateAddressSchema,
@@ -34,7 +38,9 @@ def get_address_service(
 async def create_address(
     address: CreateAddressSchema,
     service: AddressService = Depends(get_address_service),
+    current_user: User = Depends(get_current_user),
 ):
+    address.user_id = current_user.id
     return await service.create_address(address)
 
 
@@ -44,6 +50,7 @@ async def create_address(
 )
 async def get_all_addresses(
     service: AddressService = Depends(get_address_service),
+    _: User = Depends(require_admin),
 ):
     return await service.get_all_addresses()
 
@@ -55,8 +62,12 @@ async def get_all_addresses(
 async def get_address_by_id(
     address_id: UUID,
     service: AddressService = Depends(get_address_service),
+    current_user: User = Depends(get_current_user),
 ):
-    return await service.get_address_by_id(address_id)
+    address = await service.get_address_by_id(address_id)
+    if not current_user.is_admin() and address.user_id != current_user.id:
+        raise UnauthorizedException("Acesso negado")
+    return address
 
 
 @address_router.get(
@@ -66,7 +77,10 @@ async def get_address_by_id(
 async def get_addresses_by_user_id(
     user_id: UUID,
     service: AddressService = Depends(get_address_service),
+    current_user: User = Depends(get_current_user),
 ):
+    if not current_user.is_admin() and current_user.id != user_id:
+        raise UnauthorizedException("Acesso negado")
     return await service.get_addresses_by_user_id(user_id)
 
 
@@ -77,7 +91,11 @@ async def get_addresses_by_user_id(
 async def update_address(
     address: UpdateAddressSchema,
     service: AddressService = Depends(get_address_service),
+    current_user: User = Depends(get_current_user),
 ):
+    db_address = await service.get_address_by_id(address.id)
+    if not current_user.is_admin() and db_address.user_id != current_user.id:
+        raise UnauthorizedException("Acesso negado")
     return await service.update_address(address)
 
 
@@ -88,5 +106,9 @@ async def update_address(
 async def delete_address(
     address_id: UUID,
     service: AddressService = Depends(get_address_service),
+    current_user: User = Depends(get_current_user),
 ):
+    address = await service.get_address_by_id(address_id)
+    if not current_user.is_admin() and address.user_id != current_user.id:
+        raise UnauthorizedException("Acesso negado")
     await service.delete_address_by_id(address_id)

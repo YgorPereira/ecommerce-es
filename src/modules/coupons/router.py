@@ -5,6 +5,8 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from src.database.session import get_db
+from src.modules.auth.permissions import require_admin
+from src.modules.users.entity import User
 from src.modules.coupons.repository import CouponRepository
 from src.modules.coupons.schemas import (
     CreateCouponSchema,
@@ -34,6 +36,7 @@ def get_coupon_service(
 async def create_coupon(
     coupon: CreateCouponSchema,
     service: CouponService = Depends(get_coupon_service),
+    _: User = Depends(require_admin),
 ):
     return await service.create_coupon(coupon)
 
@@ -66,6 +69,7 @@ async def get_coupon_by_id(
 async def update_coupon(
     coupon: UpdateCouponSchema,
     service: CouponService = Depends(get_coupon_service),
+    _: User = Depends(require_admin),
 ):
     return await service.update_coupon(coupon)
 
@@ -77,5 +81,6 @@ async def update_coupon(
 async def delete_coupon(
     coupon_id: UUID,
     service: CouponService = Depends(get_coupon_service),
+    _: User = Depends(require_admin),
 ):
     await service.delete_coupon_by_id(coupon_id)

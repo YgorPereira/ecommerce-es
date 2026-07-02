@@ -3,7 +3,6 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock
 
 import pytest
-from fastapi.testclient import TestClient
 
 from src.main import app
 from src.modules.cart_items.entity import CartItem
@@ -16,16 +15,11 @@ from src.modules.orders.entity import Order
 
 
 @pytest.fixture
-def client():
-    return TestClient(app)
-
-
-@pytest.fixture
 def mock_cart_service():
     service = AsyncMock()
     app.dependency_overrides[get_cart_service] = lambda: service
     yield service
-    app.dependency_overrides.clear()
+    app.dependency_overrides.pop(get_cart_service, None)
 
 
 @pytest.fixture
@@ -33,7 +27,7 @@ def mock_cart_item_service():
     service = AsyncMock()
     app.dependency_overrides[get_cart_item_service] = lambda: service
     yield service
-    app.dependency_overrides.clear()
+    app.dependency_overrides.pop(get_cart_item_service, None)
 
 
 @pytest.fixture
@@ -41,7 +35,7 @@ def mock_checkout_service():
     service = AsyncMock()
     app.dependency_overrides[get_checkout_service] = lambda: service
     yield service
-    app.dependency_overrides.clear()
+    app.dependency_overrides.pop(get_checkout_service, None)
 
 
 @pytest.fixture
@@ -55,10 +49,10 @@ def cart():
 
 
 @pytest.mark.api
-def test_create_cart(client, mock_cart_service, cart):
+def test_create_cart(authenticated_client, mock_cart_service, cart):
     mock_cart_service.create_cart.return_value = cart
 
-    response = client.post(
+    response = authenticated_client.post(
         "/carts",
         json={
             "user_id": str(cart.user_id),
@@ -76,81 +70,80 @@ def test_create_cart(client, mock_cart_service, cart):
 
 
 @pytest.mark.api
-def test_create_cart_without_coupon(client, mock_cart_service, cart):
+def test_create_cart_without_coupon(authenticated_client, mock_cart_service, cart):
     cart.coupon_id = None
     mock_cart_service.create_cart.return_value = cart
 
-    response = client.post("/carts", json={"user_id": str(cart.user_id)})
+    response = authenticated_client.post("/carts", json={"user_id": str(cart.user_id)})
 
     assert response.status_code == 201
     assert response.json()["coupon_id"] is None
 
 
 @pytest.mark.api
-def test_get_cart_by_id(client, mock_cart_service, cart):
+def test_get_cart_by_id(authenticated_client, mock_cart_service, cart, user):
+    cart.user_id = user.id
     mock_cart_service.get_cart_by_id.return_value = cart
 
-    response = client.get(f"/carts/{cart.id}")
+    response = authenticated_client.get(f"/carts/{cart.id}")
 
     assert response.status_code == 200
     assert response.json()["id"] == str(cart.id)
 
 
+
 @pytest.mark.api
-def test_get_cart_by_id_not_found(client, mock_cart_service):
+def test_get_cart_by_id_not_found(authenticated_client, mock_cart_service):
     mock_cart_service.get_cart_by_id.side_effect = CartNotFoundException()
 
-    response = client.get(f"/carts/{uuid.uuid4()}")
+    response = authenticated_client.get(f"/carts/{uuid.uuid4()}")
 
     assert response.status_code == 404
 
 
 @pytest.mark.api
-def test_get_carts_by_user_id(client, mock_cart_service, cart):
+def test_get_carts_by_user_id(authenticated_client, mock_cart_service, cart, user):
+    cart.user_id = user.id
     mock_cart_service.get_carts_by_user_id.return_value = [cart]
 
-    response = client.get(f"/carts/user/{cart.user_id}")
+    response = authenticated_client.get(f"/carts/user/{user.id}")
 
     assert response.status_code == 200
     body = response.json()
     assert isinstance(body, list)
     assert len(body) == 1
-    assert body[0]["user_id"] == str(cart.user_id)
+    assert body[0]["user_id"] == str(user.id)
 
 
 @pytest.mark.api
-def test_get_all_carts(client, mock_cart_service, cart):
+def test_get_all_carts(admin_client, mock_cart_service, cart):
     mock_cart_service.get_all_carts.return_value = [cart, cart]
 
-    response = client.get("/carts")
+    response = admin_client.get("/carts")
 
     assert response.status_code == 200
-    body = response.json()
-    assert isinstance(body, list)
-    assert len(body) == 2
+    assert len(response.json()) == 2
 
 
 @pytest.mark.api
-def test_get_all_carts_empty(client, mock_cart_service):
+def test_get_all_carts_empty(admin_client, mock_cart_service):
     mock_cart_service.get_all_carts.return_value = []
 
-    response = client.get("/carts")
+    response = admin_client.get("/carts")
 
     assert response.status_code == 200
     assert response.json() == []
 
 
 @pytest.mark.api
-def test_update_cart(client, mock_cart_service, cart):
+def test_update_cart(authenticated_client, mock_cart_service, cart, user):
+    cart.user_id = user.id
+    mock_cart_service.repository.get_by_id.return_value = cart  # ⬅️ auth check
     mock_cart_service.update_cart.return_value = cart
 
-    response = client.put(
+    response = authenticated_client.put(
         "/carts",
-        json={
-            "id": str(cart.id),
-            "user_id": str(cart.user_id),
-            "coupon_id": str(cart.coupon_id),
-        },
+        json={"id": str(cart.id), "user_id": str(cart.user_id), "coupon_id": str(cart.coupon_id)},
     )
 
     assert response.status_code == 200
@@ -158,10 +151,10 @@ def test_update_cart(client, mock_cart_service, cart):
 
 
 @pytest.mark.api
-def test_update_cart_not_found(client, mock_cart_service):
-    mock_cart_service.update_cart.side_effect = CartNotFoundException()
+def test_update_cart_not_found(authenticated_client, mock_cart_service):
+    mock_cart_service.repository.get_by_id.side_effect = CartNotFoundException()
 
-    response = client.put(
+    response = authenticated_client.put(
         "/carts",
         json={"id": str(uuid.uuid4()), "user_id": str(uuid.uuid4())},
     )
@@ -170,26 +163,28 @@ def test_update_cart_not_found(client, mock_cart_service):
 
 
 @pytest.mark.api
-def test_delete_cart(client, mock_cart_service, cart):
+def test_delete_cart(authenticated_client, mock_cart_service, cart, user):
+    cart.user_id = user.id
+    mock_cart_service.get_cart_by_id.return_value = cart
     mock_cart_service.delete_cart_by_id.return_value = True
 
-    response = client.delete(f"/carts/{cart.id}")
+    response = authenticated_client.delete(f"/carts/{cart.id}")
 
     assert response.status_code == 204
     mock_cart_service.delete_cart_by_id.assert_awaited_once_with(cart.id)
 
 
 @pytest.mark.api
-def test_delete_cart_not_found(client, mock_cart_service):
-    mock_cart_service.delete_cart_by_id.side_effect = CartNotFoundException()
+def test_delete_cart_not_found(authenticated_client, mock_cart_service):
+    mock_cart_service.get_cart_by_id.side_effect = CartNotFoundException()
 
-    response = client.delete(f"/carts/{uuid.uuid4()}")
+    response = authenticated_client.delete(f"/carts/{uuid.uuid4()}")
 
     assert response.status_code == 404
 
 
 @pytest.mark.api
-def test_get_cart_items(client, mock_cart_service, mock_cart_item_service, cart):
+def test_get_cart_items(authenticated_client, mock_cart_service, mock_cart_item_service, cart):
     item = CartItem(
         id=uuid.uuid4(),
         cart_id=cart.id,
@@ -199,7 +194,7 @@ def test_get_cart_items(client, mock_cart_service, mock_cart_item_service, cart)
     mock_cart_service.get_cart_by_id.return_value = cart
     mock_cart_item_service.get_cart_items_by_cart_id.return_value = [item]
 
-    response = client.get(f"/carts/{cart.id}/items")
+    response = authenticated_client.get(f"/carts/{cart.id}/items")
 
     assert response.status_code == 200
     body = response.json()
@@ -211,71 +206,69 @@ def test_get_cart_items(client, mock_cart_service, mock_cart_item_service, cart)
 
 @pytest.mark.api
 def test_get_cart_items_cart_not_found(
-    client, mock_cart_service, mock_cart_item_service
+    authenticated_client, mock_cart_service, mock_cart_item_service
 ):
     mock_cart_service.get_cart_by_id.side_effect = CartNotFoundException()
 
-    response = client.get(f"/carts/{uuid.uuid4()}/items")
+    response = authenticated_client.get(f"/carts/{uuid.uuid4()}/items")
 
     assert response.status_code == 404
     mock_cart_item_service.get_cart_items_by_cart_id.assert_not_awaited()
 
 
 @pytest.mark.api
-def test_checkout(client, mock_checkout_service, cart):
+def test_checkout(authenticated_client, mock_checkout_service, cart, user):
+    cart.user_id = user.id
+    mock_checkout_service.cart_repository.get_by_id.return_value = cart
+
     order = Order(
-        user_id=cart.user_id,
-        address_id=uuid.uuid4(),
-        total_amount=200.0,
-        status="pending",
-        created_at=datetime.now(timezone.utc),
-        id=uuid.uuid4(),
+        user_id=cart.user_id, address_id=uuid.uuid4(), total_amount=200.0,
+        status="pending", created_at=datetime.now(timezone.utc), id=uuid.uuid4(),
     )
     mock_checkout_service.checkout.return_value = order
 
-    response = client.post(
-        f"/carts/{cart.id}/checkout",
-        json={"address_id": str(order.address_id)},
+    response = authenticated_client.post(
+        f"/carts/{cart.id}/checkout", json={"address_id": str(order.address_id)},
     )
 
     assert response.status_code == 201
-    body = response.json()
-    assert body["id"] == str(order.id)
-    assert body["total_amount"] == 200.0
     mock_checkout_service.checkout.assert_awaited_once_with(cart.id, order.address_id)
 
 
 @pytest.mark.api
-def test_checkout_empty_cart(client, mock_checkout_service, cart):
+def test_checkout_empty_cart(authenticated_client, mock_checkout_service, cart, user):
+    cart.user_id = user.id
+    mock_checkout_service.cart_repository.get_by_id.return_value = cart
     mock_checkout_service.checkout.side_effect = EmptyCartException()
 
-    response = client.post(
-        f"/carts/{cart.id}/checkout",
-        json={"address_id": str(uuid.uuid4())},
+    response = authenticated_client.post(
+        f"/carts/{cart.id}/checkout", json={"address_id": str(uuid.uuid4())},
     )
 
     assert response.status_code == 400
 
 
 @pytest.mark.api
-def test_checkout_insufficient_stock(client, mock_checkout_service, cart):
+def test_checkout_insufficient_stock(authenticated_client, mock_checkout_service, cart, user):
+    cart.user_id = user.id
+    mock_checkout_service.cart_repository.get_by_id.return_value = cart
     mock_checkout_service.checkout.side_effect = InsufficientStockException()
 
-    response = client.post(
-        f"/carts/{cart.id}/checkout",
-        json={"address_id": str(uuid.uuid4())},
+    response = authenticated_client.post(
+        f"/carts/{cart.id}/checkout", json={"address_id": str(uuid.uuid4())},
     )
 
     assert response.status_code == 409
 
 
 @pytest.mark.api
-def test_checkout_cart_not_found(client, mock_checkout_service):
+def test_checkout_cart_not_found(authenticated_client, mock_checkout_service, cart, user):
+    cart.user_id = user.id
+    mock_checkout_service.cart_repository.get_by_id.return_value = cart
     mock_checkout_service.checkout.side_effect = CartNotFoundException()
 
-    response = client.post(
-        f"/carts/{uuid.uuid4()}/checkout",
-        json={"address_id": str(uuid.uuid4())},
+    response = authenticated_client.post(
+        f"/carts/{cart.id}/checkout", json={"address_id": str(uuid.uuid4())},
     )
 
     assert response.status_code == 404

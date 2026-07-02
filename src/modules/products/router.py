@@ -5,6 +5,9 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from src.database.session import get_db
+from src.modules.auth.dependencies import get_current_user
+from src.modules.auth.permissions import require_admin
+from src.modules.users.entity import User
 from src.modules.products.repository import ProductRepository
 from src.modules.products.schemas import (
     CreateProductSchema,
@@ -34,6 +37,7 @@ def get_product_service(
 async def create_product(
     product: CreateProductSchema,
     service: ProductService = Depends(get_product_service),
+    _: User = Depends(require_admin),
 ):
     return await service.create_product(product)
 
@@ -77,6 +81,7 @@ async def get_products_by_category_id(
 async def update_product(
     product: UpdateProductSchema,
     service: ProductService = Depends(get_product_service),
+    _: User = Depends(require_admin),
 ):
     return await service.update_product(product)
 
@@ -88,5 +93,6 @@ async def update_product(
 async def delete_product(
     product_id: UUID,
     service: ProductService = Depends(get_product_service),
+    _: User = Depends(require_admin),
 ):
     await service.delete_product_by_id(product_id)

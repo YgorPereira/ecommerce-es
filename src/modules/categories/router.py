@@ -5,6 +5,8 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from src.database.session import get_db
+from src.modules.auth.permissions import require_admin
+from src.modules.users.entity import User
 from src.modules.categories.repository import CategoryRepository
 from src.modules.categories.schemas import (
     CreateCategorySchema,
@@ -34,6 +36,7 @@ def get_category_service(
 async def create_category(
     category: CreateCategorySchema,
     service: CategoryService = Depends(get_category_service),
+    _: User = Depends(require_admin),
 ):
     return await service.create_category(category)
 
@@ -66,6 +69,7 @@ async def get_category_by_id(
 async def update_category(
     category: UpdateCategorySchema,
     service: CategoryService = Depends(get_category_service),
+    _: User = Depends(require_admin),
 ):
     return await service.update_category(category)
 
@@ -77,5 +81,6 @@ async def update_category(
 async def delete_category(
     category_id: UUID,
     service: CategoryService = Depends(get_category_service),
+    _: User = Depends(require_admin),
 ):
     await service.delete_category_by_id(category_id)
