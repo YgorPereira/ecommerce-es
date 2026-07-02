@@ -34,7 +34,9 @@ class ProductService:
 
         return db_item
 
-    async def get_products_by_category_id(self, category_id: uuid.UUID) -> List[Product]:
+    async def get_products_by_category_id(
+        self, category_id: uuid.UUID
+    ) -> List[Product]:
         return await self.repository.get_by_category_id(category_id)
 
     async def update_product(self, product: UpdateProductSchema) -> Product | None:

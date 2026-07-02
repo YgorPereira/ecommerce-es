@@ -5,6 +5,8 @@ from pytest_postgresql.janitor import DatabaseJanitor
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from src.database.base import Base
+from src.modules.categories.repository import CategoryRepository
+from src.modules.products.repository import ProductRepository
 from src.modules.users.repository import UserRepository
 
 fake = Faker("pt_BR")
@@ -62,6 +64,16 @@ async def db_session(test_engine) -> AsyncSession:  # type: ignore
 @pytest.fixture(scope="function")
 def user_repository(db_session):
     return UserRepository(db_session)
+
+
+@pytest.fixture(scope="function")
+def category_repository(db_session):
+    return CategoryRepository(db_session)
+
+
+@pytest.fixture(scope="function")
+def product_repository(db_session):
+    return ProductRepository(db_session)
 
 
 @pytest.fixture(scope="session")

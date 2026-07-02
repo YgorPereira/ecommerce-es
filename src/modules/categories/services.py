@@ -24,9 +24,7 @@ class CategoryService:
         if db_item is not None:
             raise CategoryNameAlreadyExistsException()
 
-        return await self.repository.create(
-            CategoryMapper.from_create_schema(category)
-        )
+        return await self.repository.create(CategoryMapper.from_create_schema(category))
 
     async def get_all_categories(self) -> List[Category]:
         return await self.repository.get_all()
@@ -39,9 +37,7 @@ class CategoryService:
 
         return db_item
 
-    async def update_category(
-        self, category: UpdateCategorySchema
-    ) -> Category | None:
+    async def update_category(self, category: UpdateCategorySchema) -> Category | None:
         db_item = await self.repository.get_by_id(category.id)
 
         if db_item is None:

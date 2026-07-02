@@ -16,6 +16,4 @@ class CategoryModel(Base, IdMixin):
     name: Mapped[str] = mapped_column(String(100), unique=True, index=True)
     description: Mapped[str] = mapped_column(String(255))
 
-    products: Mapped[List["ProductModel"]] = relationship(
-        back_populates="category"
-    )
+    products: Mapped[List["ProductModel"]] = relationship(back_populates="category")
