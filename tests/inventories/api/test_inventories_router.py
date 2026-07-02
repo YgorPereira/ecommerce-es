@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 from src.main import app
 from src.modules.inventories.entity import Inventory
 from src.modules.inventories.exceptions import (
+    InsufficientStockException,
     InventoryAlreadyExistsException,
     InventoryNotFoundException,
 )
@@ -145,6 +146,44 @@ def test_get_all_inventories_empty(client, mock_inventory_service):
 
     assert response.status_code == 200
     assert response.json() == []
+
+
+@pytest.mark.api
+def test_reserve_stock(client, mock_inventory_service, inventory):
+    mock_inventory_service.reserve_stock.return_value = inventory
+
+    response = client.post(
+        f"/inventories/product/{inventory.product_id}/reserve",
+        json={"quantity": 1},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["product_id"] == str(inventory.product_id)
+    mock_inventory_service.reserve_stock.assert_awaited_once_with(
+        inventory.product_id, 1
+    )
+
+
+@pytest.mark.api
+def test_reserve_stock_insufficient(client, mock_inventory_service, inventory):
+    mock_inventory_service.reserve_stock.side_effect = InsufficientStockException()
+
+    response = client.post(
+        f"/inventories/product/{inventory.product_id}/reserve",
+        json={"quantity": 99},
+    )
+
+    assert response.status_code == 409
+
+
+@pytest.mark.api
+def test_reserve_stock_invalid_quantity(client, inventory):
+    response = client.post(
+        f"/inventories/product/{inventory.product_id}/reserve",
+        json={"quantity": 0},
+    )
+
+    assert response.status_code == 422
 
 
 @pytest.mark.api

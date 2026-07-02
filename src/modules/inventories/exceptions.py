@@ -9,3 +9,8 @@ class InventoryNotFoundException(NotFoundException):
 class InventoryAlreadyExistsException(ConflictException):
     def __init__(self):
         super().__init__("Estoque já cadastrado para esse produto")
+
+
+class InsufficientStockException(ConflictException):
+    def __init__(self):
+        super().__init__("Estoque insuficiente para o produto")

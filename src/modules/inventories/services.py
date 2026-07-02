@@ -4,6 +4,7 @@ import uuid
 
 from src.modules.inventories.entity import Inventory
 from src.modules.inventories.exceptions import (
+    InsufficientStockException,
     InventoryAlreadyExistsException,
     InventoryNotFoundException,
 )
@@ -67,6 +68,29 @@ class InventoryService:
                 updated_at=datetime.now(timezone.utc),
             )
         )
+
+    async def reserve_stock(self, product_id: uuid.UUID, quantity: int) -> Inventory:
+        """Reserva (baixa) estoque de forma atômica e à prova de concorrência.
+
+        Se dois usuários tentarem reservar a última unidade ao mesmo tempo,
+        apenas um consegue: o outro recebe ``InsufficientStockException``.
+        """
+        reserved = await self.repository.decrement(product_id, quantity)
+
+        if not reserved:
+            existing = await self.repository.get_by_product_id(product_id)
+
+            if existing is None:
+                raise InventoryNotFoundException()
+
+            raise InsufficientStockException()
+
+        reserved_item = await self.repository.get_by_product_id(product_id)
+
+        if reserved_item is None:
+            raise InventoryNotFoundException()
+
+        return reserved_item
 
     async def delete_inventory_by_id(self, id: uuid.UUID) -> bool:
         db_item = await self.repository.get_by_id(id)

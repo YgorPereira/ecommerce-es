@@ -6,6 +6,7 @@ import pytest
 
 from src.modules.inventories.entity import Inventory
 from src.modules.inventories.exceptions import (
+    InsufficientStockException,
     InventoryAlreadyExistsException,
     InventoryNotFoundException,
 )
@@ -173,6 +174,39 @@ async def test_update_inventory_not_found(
 
     mock_repository.get_by_id.assert_called_once()
     mock_repository.update_by_id.assert_not_called()
+
+
+@pytest.mark.unit()
+async def test_reserve_stock_success(inventory_service, mock_repository, inventory):
+    mock_repository.decrement.return_value = True
+    mock_repository.get_by_product_id.return_value = inventory
+
+    result = await inventory_service.reserve_stock(inventory.product_id, 1)
+
+    mock_repository.decrement.assert_awaited_once_with(inventory.product_id, 1)
+    assert result is inventory
+
+
+@pytest.mark.unit()
+async def test_reserve_stock_insufficient(
+    inventory_service, mock_repository, inventory
+):
+    mock_repository.decrement.return_value = False
+    mock_repository.get_by_product_id.return_value = inventory
+
+    with pytest.raises(InsufficientStockException):
+        await inventory_service.reserve_stock(inventory.product_id, 5)
+
+    mock_repository.decrement.assert_awaited_once_with(inventory.product_id, 5)
+
+
+@pytest.mark.unit()
+async def test_reserve_stock_product_not_found(inventory_service, mock_repository):
+    mock_repository.decrement.return_value = False
+    mock_repository.get_by_product_id.return_value = None
+
+    with pytest.raises(InventoryNotFoundException):
+        await inventory_service.reserve_stock(uuid.uuid4(), 1)
 
 
 @pytest.mark.unit()

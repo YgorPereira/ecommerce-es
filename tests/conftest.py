@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from src.database.base import Base
 from src.modules.categories.repository import CategoryRepository
+from src.modules.inventories.repository import InventoryRepository
 from src.modules.products.repository import ProductRepository
 from src.modules.users.repository import UserRepository
 
@@ -74,6 +75,11 @@ def category_repository(db_session):
 @pytest.fixture(scope="function")
 def product_repository(db_session):
     return ProductRepository(db_session)
+
+
+@pytest.fixture(scope="function")
+def inventory_repository(db_session):
+    return InventoryRepository(db_session)
 
 
 @pytest.fixture(scope="session")
