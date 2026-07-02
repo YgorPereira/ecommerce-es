@@ -9,6 +9,7 @@ from src.core.settings import settings
 from src.database.base import Base
 from src.modules.categories.models import CategoryModel
 from src.modules.coupons.models import CouponModel
+from src.modules.inventories.models import InventoryModel
 from src.modules.products.models import ProductModel
 from src.modules.users.models import UserModel
 
