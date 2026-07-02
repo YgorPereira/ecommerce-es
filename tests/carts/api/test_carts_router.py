@@ -6,6 +6,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from src.main import app
+from src.modules.cart_items.entity import CartItem
+from src.modules.cart_items.router import get_cart_item_service
 from src.modules.carts.entity import Cart
 from src.modules.carts.exceptions import CartNotFoundException
 from src.modules.carts.router import get_cart_service
@@ -20,6 +22,14 @@ def client():
 def mock_cart_service():
     service = AsyncMock()
     app.dependency_overrides[get_cart_service] = lambda: service
+    yield service
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def mock_cart_item_service():
+    service = AsyncMock()
+    app.dependency_overrides[get_cart_item_service] = lambda: service
     yield service
     app.dependency_overrides.clear()
 
@@ -166,3 +176,36 @@ def test_delete_cart_not_found(client, mock_cart_service):
     response = client.delete(f"/carts/{uuid.uuid4()}")
 
     assert response.status_code == 404
+
+
+@pytest.mark.api
+def test_get_cart_items(client, mock_cart_service, mock_cart_item_service, cart):
+    item = CartItem(
+        id=uuid.uuid4(),
+        cart_id=cart.id,
+        product_id=uuid.uuid4(),
+        quantity=3,
+    )
+    mock_cart_service.get_cart_by_id.return_value = cart
+    mock_cart_item_service.get_cart_items_by_cart_id.return_value = [item]
+
+    response = client.get(f"/carts/{cart.id}/items")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert isinstance(body, list)
+    assert len(body) == 1
+    assert body[0]["cart_id"] == str(cart.id)
+    assert body[0]["quantity"] == 3
+
+
+@pytest.mark.api
+def test_get_cart_items_cart_not_found(
+    client, mock_cart_service, mock_cart_item_service
+):
+    mock_cart_service.get_cart_by_id.side_effect = CartNotFoundException()
+
+    response = client.get(f"/carts/{uuid.uuid4()}/items")
+
+    assert response.status_code == 404
+    mock_cart_item_service.get_cart_items_by_cart_id.assert_not_awaited()
