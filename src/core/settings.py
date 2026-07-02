@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str
     MERCADO_PAGO_ACCESS_TOKEN: str | None = None
     MERCADO_PAGO_API_URL: str = "https://api.mercadopago.com"
+    WEBHOOK_SECRET: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=".env",

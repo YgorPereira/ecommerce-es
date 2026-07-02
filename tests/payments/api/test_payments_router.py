@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock
 import pytest
 from fastapi.testclient import TestClient
 
+from src.core.settings import settings
 from src.main import app
 from src.modules.payments.entity import Payment
 from src.modules.payments.exceptions import PaymentNotFoundException
@@ -187,6 +188,39 @@ def test_payment_webhook_not_found(client, mock_payment_service):
     )
 
     assert response.status_code == 404
+
+
+@pytest.mark.api
+def test_payment_webhook_rejects_wrong_secret(
+    client, mock_payment_service, monkeypatch
+):
+    monkeypatch.setattr(settings, "WEBHOOK_SECRET", "s3cr3t")
+
+    response = client.post(
+        "/payments/webhook",
+        json={"reference": "mp-123", "status": "approved"},
+    )
+
+    assert response.status_code == 401
+    mock_payment_service.process_webhook.assert_not_awaited()
+
+
+@pytest.mark.api
+def test_payment_webhook_accepts_correct_secret(
+    client, mock_payment_service, payment, monkeypatch
+):
+    monkeypatch.setattr(settings, "WEBHOOK_SECRET", "s3cr3t")
+    payment.status = "paid"
+    mock_payment_service.process_webhook.return_value = payment
+
+    response = client.post(
+        "/payments/webhook",
+        json={"reference": "mp-123", "status": "approved"},
+        headers={"X-Webhook-Secret": "s3cr3t"},
+    )
+
+    assert response.status_code == 200
+    mock_payment_service.process_webhook.assert_awaited_once()
 
 
 @pytest.mark.api

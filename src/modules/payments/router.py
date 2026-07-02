@@ -1,9 +1,10 @@
 from typing import List
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Header, status
 from sqlalchemy.orm import Session
 
+from src.core.settings import settings
 from src.database.session import get_db
 from src.modules.orders.repository import OrderRepository
 from src.modules.payments.gateway import build_payment_gateway
@@ -15,6 +16,7 @@ from src.modules.payments.schemas import (
     PaymentWebhookSchema,
 )
 from src.modules.payments.services import PaymentService
+from src.shared.exceptions import UnauthorizedException
 
 payment_router = APIRouter(
     prefix="/payments",
@@ -31,6 +33,18 @@ def get_payment_service(
         build_payment_gateway(),
         OrderRepository(db),
     )
+
+
+def verify_webhook_secret(
+    x_webhook_secret: str | None = Header(default=None),
+) -> None:
+    """Autentica o webhook comparando um segredo compartilhado.
+
+    Só é exigido quando ``WEBHOOK_SECRET`` está configurado no ambiente — assim,
+    em desenvolvimento (sem segredo) o fluxo local continua aberto.
+    """
+    if settings.WEBHOOK_SECRET and x_webhook_secret != settings.WEBHOOK_SECRET:
+        raise UnauthorizedException("Webhook não autorizado")
 
 
 @payment_router.post(
@@ -52,6 +66,7 @@ async def create_payment(
 async def payment_webhook(
     webhook: PaymentWebhookSchema,
     service: PaymentService = Depends(get_payment_service),
+    _: None = Depends(verify_webhook_secret),
 ):
     """Confirmação assíncrona enviada pelo gateway de pagamento."""
     return await service.process_webhook(webhook.reference, webhook.status)
