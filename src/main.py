@@ -8,6 +8,7 @@ from src.modules.coupons.router import coupon_router
 from src.modules.inventories.router import inventory_router
 from src.modules.order_items.router import order_item_router
 from src.modules.orders.router import order_router
+from src.modules.payments.router import payment_router
 from src.modules.products.router import product_router
 from src.modules.users.router import user_router
 from src.modules.auth.router import auth_router
@@ -41,6 +42,7 @@ app.include_router(cart_router)
 app.include_router(cart_item_router)
 app.include_router(order_router)
 app.include_router(order_item_router)
+app.include_router(payment_router)
 app.include_router(auth_router)
 
 if __name__ == "__main__":

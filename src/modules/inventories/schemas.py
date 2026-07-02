@@ -22,3 +22,7 @@ class InventoryResponseSchema(BaseInventorySchema):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class ReserveStockSchema(BaseModel):
+    quantity: int = Field(gt=0)

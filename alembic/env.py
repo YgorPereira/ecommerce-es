@@ -15,6 +15,7 @@ from src.modules.coupons.models import CouponModel
 from src.modules.inventories.models import InventoryModel
 from src.modules.order_items.models import OrderItemModel
 from src.modules.orders.models import OrderModel
+from src.modules.payments.models import PaymentModel
 from src.modules.products.models import ProductModel
 from src.modules.users.models import UserModel
 

@@ -1,7 +1,8 @@
+from datetime import datetime, timezone
 from typing import List
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.modules.inventories.entity import Inventory
@@ -43,6 +44,28 @@ class InventoryRepository:
             return None
 
         return InventoryMapper.to_entity(model)
+
+    async def decrement(self, product_id: uuid.UUID, quantity: int) -> bool:
+        """Baixa o estoque de forma atômica.
+
+        Usa um UPDATE condicional (``quantity >= :quantity``): o próprio banco
+        garante que dois requests concorrentes não deixem o estoque negativo,
+        pois cada UPDATE é atômico. Retorna ``True`` se a baixa ocorreu (havia
+        estoque) e ``False`` caso contrário (sem estoque ou produto inexistente).
+        """
+        stmt = (
+            update(InventoryModel)
+            .where(
+                InventoryModel.product_id == product_id,
+                InventoryModel.quantity >= quantity,
+            )
+            .values(
+                quantity=InventoryModel.quantity - quantity,
+                updated_at=datetime.now(timezone.utc),
+            )
+        )
+        result = await self.db_session.execute(stmt)
+        return result.rowcount == 1
 
     async def update_by_id(self, inventory: Inventory) -> Inventory | None:
         model = InventoryMapper.to_model(inventory)

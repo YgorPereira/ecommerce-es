@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     POSTGRES_PORT: int
     POSTGRES_DB: str = "ecommerce"
     SECRET_KEY: str
+    MERCADO_PAGO_ACCESS_TOKEN: str | None = None
+    MERCADO_PAGO_API_URL: str = "https://api.mercadopago.com"
 
     model_config = SettingsConfigDict(
         env_file=".env",

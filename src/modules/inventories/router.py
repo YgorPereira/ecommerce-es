@@ -10,6 +10,7 @@ from src.modules.inventories.schemas import (
     CreateInventorySchema,
     UpdateInventorySchema,
     InventoryResponseSchema,
+    ReserveStockSchema,
 )
 from src.modules.inventories.services import InventoryService
 
@@ -68,6 +69,18 @@ async def get_inventory_by_product_id(
     service: InventoryService = Depends(get_inventory_service),
 ):
     return await service.get_inventory_by_product_id(product_id)
+
+
+@inventory_router.post(
+    "/product/{product_id}/reserve",
+    response_model=InventoryResponseSchema,
+)
+async def reserve_stock(
+    product_id: UUID,
+    reservation: ReserveStockSchema,
+    service: InventoryService = Depends(get_inventory_service),
+):
+    return await service.reserve_stock(product_id, reservation.quantity)
 
 
 @inventory_router.put(

@@ -1,0 +1,106 @@
+from typing import List
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, status
+from sqlalchemy.orm import Session
+
+from src.database.session import get_db
+from src.modules.payments.gateway import build_payment_gateway
+from src.modules.payments.repository import PaymentRepository
+from src.modules.payments.schemas import (
+    CreatePaymentSchema,
+    UpdatePaymentSchema,
+    PaymentResponseSchema,
+    PaymentWebhookSchema,
+)
+from src.modules.payments.services import PaymentService
+
+payment_router = APIRouter(
+    prefix="/payments",
+    tags=["Payments"],
+)
+
+
+def get_payment_service(
+    db: Session = Depends(get_db),
+) -> PaymentService:
+    repository = PaymentRepository(db)
+    return PaymentService(repository, build_payment_gateway())
+
+
+@payment_router.post(
+    "",
+    response_model=PaymentResponseSchema,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_payment(
+    payment: CreatePaymentSchema,
+    service: PaymentService = Depends(get_payment_service),
+):
+    return await service.create_payment(payment)
+
+
+@payment_router.post(
+    "/webhook",
+    response_model=PaymentResponseSchema,
+)
+async def payment_webhook(
+    webhook: PaymentWebhookSchema,
+    service: PaymentService = Depends(get_payment_service),
+):
+    """Confirmação assíncrona enviada pelo gateway de pagamento."""
+    return await service.process_webhook(webhook.reference, webhook.status)
+
+
+@payment_router.get(
+    "",
+    response_model=List[PaymentResponseSchema],
+)
+async def get_all_payments(
+    service: PaymentService = Depends(get_payment_service),
+):
+    return await service.get_all_payments()
+
+
+@payment_router.get(
+    "/{payment_id}",
+    response_model=PaymentResponseSchema,
+)
+async def get_payment_by_id(
+    payment_id: UUID,
+    service: PaymentService = Depends(get_payment_service),
+):
+    return await service.get_payment_by_id(payment_id)
+
+
+@payment_router.get(
+    "/order/{order_id}",
+    response_model=List[PaymentResponseSchema],
+)
+async def get_payments_by_order_id(
+    order_id: UUID,
+    service: PaymentService = Depends(get_payment_service),
+):
+    return await service.get_payments_by_order_id(order_id)
+
+
+@payment_router.put(
+    "",
+    response_model=PaymentResponseSchema,
+)
+async def update_payment(
+    payment: UpdatePaymentSchema,
+    service: PaymentService = Depends(get_payment_service),
+):
+    return await service.update_payment(payment)
+
+
+@payment_router.delete(
+    "/{payment_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_payment(
+    payment_id: UUID,
+    service: PaymentService = Depends(get_payment_service),
+):
+    await service.delete_payment_by_id(payment_id)
