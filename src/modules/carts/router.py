@@ -5,6 +5,9 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from src.database.session import get_db
+from src.modules.cart_items.router import get_cart_item_service
+from src.modules.cart_items.schemas import CartItemResponseSchema
+from src.modules.cart_items.services import CartItemService
 from src.modules.carts.repository import CartRepository
 from src.modules.carts.schemas import (
     CreateCartSchema,
@@ -68,6 +71,19 @@ async def get_carts_by_user_id(
     service: CartService = Depends(get_cart_service),
 ):
     return await service.get_carts_by_user_id(user_id)
+
+
+@cart_router.get(
+    "/{cart_id}/items",
+    response_model=List[CartItemResponseSchema],
+)
+async def get_cart_items(
+    cart_id: UUID,
+    service: CartService = Depends(get_cart_service),
+    cart_item_service: CartItemService = Depends(get_cart_item_service),
+):
+    await service.get_cart_by_id(cart_id)
+    return await cart_item_service.get_cart_items_by_cart_id(cart_id)
 
 
 @cart_router.put(
