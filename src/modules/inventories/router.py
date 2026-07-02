@@ -5,6 +5,8 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from src.database.session import get_db
+from src.modules.auth.permissions import require_admin
+from src.modules.users.entity import User
 from src.modules.inventories.repository import InventoryRepository
 from src.modules.inventories.schemas import (
     CreateInventorySchema,
@@ -35,6 +37,7 @@ def get_inventory_service(
 async def create_inventory(
     inventory: CreateInventorySchema,
     service: InventoryService = Depends(get_inventory_service),
+    _: User = Depends(require_admin),
 ):
     return await service.create_inventory(inventory)
 
@@ -45,6 +48,7 @@ async def create_inventory(
 )
 async def get_all_inventories(
     service: InventoryService = Depends(get_inventory_service),
+    _: User = Depends(require_admin),
 ):
     return await service.get_all_inventories()
 
@@ -56,6 +60,7 @@ async def get_all_inventories(
 async def get_inventory_by_id(
     inventory_id: UUID,
     service: InventoryService = Depends(get_inventory_service),
+    _: User = Depends(require_admin),
 ):
     return await service.get_inventory_by_id(inventory_id)
 
@@ -67,6 +72,7 @@ async def get_inventory_by_id(
 async def get_inventory_by_product_id(
     product_id: UUID,
     service: InventoryService = Depends(get_inventory_service),
+    _: User = Depends(require_admin),
 ):
     return await service.get_inventory_by_product_id(product_id)
 
@@ -79,6 +85,7 @@ async def reserve_stock(
     product_id: UUID,
     reservation: ReserveStockSchema,
     service: InventoryService = Depends(get_inventory_service),
+    _: User = Depends(require_admin),
 ):
     return await service.reserve_stock(product_id, reservation.quantity)
 
@@ -90,6 +97,7 @@ async def reserve_stock(
 async def update_inventory(
     inventory: UpdateInventorySchema,
     service: InventoryService = Depends(get_inventory_service),
+    _: User = Depends(require_admin),
 ):
     return await service.update_inventory(inventory)
 
@@ -101,5 +109,6 @@ async def update_inventory(
 async def delete_inventory(
     inventory_id: UUID,
     service: InventoryService = Depends(get_inventory_service),
+    _: User = Depends(require_admin),
 ):
     await service.delete_inventory_by_id(inventory_id)

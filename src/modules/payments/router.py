@@ -6,6 +6,10 @@ from sqlalchemy.orm import Session
 
 from src.core.settings import settings
 from src.database.session import get_db
+from src.modules.auth.dependencies import get_current_user
+from src.modules.auth.permissions import require_admin
+from src.modules.users.entity import User
+from src.shared.exceptions import UnauthorizedException
 from src.modules.orders.repository import OrderRepository
 from src.modules.payments.gateway import build_payment_gateway
 from src.modules.payments.repository import PaymentRepository
@@ -55,6 +59,7 @@ def verify_webhook_secret(
 async def create_payment(
     payment: CreatePaymentSchema,
     service: PaymentService = Depends(get_payment_service),
+    current_user: User = Depends(get_current_user),
 ):
     return await service.create_payment(payment)
 
@@ -78,6 +83,7 @@ async def payment_webhook(
 )
 async def get_all_payments(
     service: PaymentService = Depends(get_payment_service),
+    _: User = Depends(require_admin),
 ):
     return await service.get_all_payments()
 
@@ -89,8 +95,13 @@ async def get_all_payments(
 async def get_payment_by_id(
     payment_id: UUID,
     service: PaymentService = Depends(get_payment_service),
+    current_user: User = Depends(get_current_user),
 ):
-    return await service.get_payment_by_id(payment_id)
+    payment = await service.get_payment_by_id(payment_id)
+    order = await service.order_repository.get_by_id(payment.order_id)
+    if not current_user.is_admin() and order.user_id != current_user.id:
+        raise UnauthorizedException("Acesso negado")
+    return payment
 
 
 @payment_router.get(
@@ -100,7 +111,11 @@ async def get_payment_by_id(
 async def get_payments_by_order_id(
     order_id: UUID,
     service: PaymentService = Depends(get_payment_service),
+    current_user: User = Depends(get_current_user),
 ):
+    order = await service.order_repository.get_by_id(order_id)
+    if not current_user.is_admin() and order.user_id != current_user.id:
+        raise UnauthorizedException("Acesso negado")
     return await service.get_payments_by_order_id(order_id)
 
 
@@ -111,6 +126,7 @@ async def get_payments_by_order_id(
 async def update_payment(
     payment: UpdatePaymentSchema,
     service: PaymentService = Depends(get_payment_service),
+    _: User = Depends(require_admin),
 ):
     return await service.update_payment(payment)
 

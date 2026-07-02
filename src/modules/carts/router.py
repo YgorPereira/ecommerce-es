@@ -5,6 +5,10 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from src.database.session import get_db
+from src.modules.auth.dependencies import get_current_user
+from src.modules.auth.permissions import require_admin
+from src.modules.users.entity import User
+from src.shared.exceptions import UnauthorizedException
 from src.modules.cart_items.repository import CartItemRepository
 from src.modules.cart_items.router import get_cart_item_service
 from src.modules.cart_items.schemas import CartItemResponseSchema
@@ -60,7 +64,9 @@ def get_checkout_service(
 async def create_cart(
     cart: CreateCartSchema,
     service: CartService = Depends(get_cart_service),
+    current_user: User = Depends(get_current_user),
 ):
+    cart.user_id = current_user.id
     return await service.create_cart(cart)
 
 
@@ -70,6 +76,7 @@ async def create_cart(
 )
 async def get_all_carts(
     service: CartService = Depends(get_cart_service),
+    _: User = Depends(require_admin),
 ):
     return await service.get_all_carts()
 
@@ -81,8 +88,12 @@ async def get_all_carts(
 async def get_cart_by_id(
     cart_id: UUID,
     service: CartService = Depends(get_cart_service),
+    current_user: User = Depends(get_current_user),
 ):
-    return await service.get_cart_by_id(cart_id)
+    cart = await service.get_cart_by_id(cart_id)
+    if not current_user.is_admin() and cart.user_id != current_user.id:
+        raise UnauthorizedException("Acesso negado")
+    return cart
 
 
 @cart_router.get(
@@ -92,7 +103,10 @@ async def get_cart_by_id(
 async def get_carts_by_user_id(
     user_id: UUID,
     service: CartService = Depends(get_cart_service),
+    current_user: User = Depends(get_current_user),
 ):
+    if not current_user.is_admin() and current_user.id != user_id:
+        raise UnauthorizedException("Acesso negado")
     return await service.get_carts_by_user_id(user_id)
 
 
@@ -118,7 +132,11 @@ async def checkout(
     cart_id: UUID,
     payload: CheckoutSchema,
     service: CheckoutService = Depends(get_checkout_service),
+    current_user: User = Depends(get_current_user),
 ):
+    cart = await service.cart_repository.get_by_id(cart_id)
+    if not current_user.is_admin() and cart.user_id != current_user.id:
+        raise UnauthorizedException("Acesso negado")
     return await service.checkout(cart_id, payload.address_id)
 
 
@@ -129,7 +147,11 @@ async def checkout(
 async def update_cart(
     cart: UpdateCartSchema,
     service: CartService = Depends(get_cart_service),
+    current_user: User = Depends(get_current_user),
 ):
+    db_cart = await service.repository.get_by_id(cart.id)
+    if not current_user.is_admin() and db_cart.user_id != current_user.id:
+        raise UnauthorizedException("Acesso negado")
     return await service.update_cart(cart)
 
 
@@ -140,5 +162,9 @@ async def update_cart(
 async def delete_cart(
     cart_id: UUID,
     service: CartService = Depends(get_cart_service),
+    current_user: User = Depends(get_current_user),
 ):
+    cart = await service.get_cart_by_id(cart_id)
+    if not current_user.is_admin() and cart.user_id != current_user.id:
+        raise UnauthorizedException("Acesso negado")
     await service.delete_cart_by_id(cart_id)
