@@ -6,6 +6,7 @@ from src.modules.carts.router import cart_router
 from src.modules.categories.router import category_router
 from src.modules.coupons.router import coupon_router
 from src.modules.inventories.router import inventory_router
+from src.modules.order_items.router import order_item_router
 from src.modules.orders.router import order_router
 from src.modules.products.router import product_router
 from src.modules.users.router import user_router
@@ -39,6 +40,7 @@ app.include_router(address_router)
 app.include_router(cart_router)
 app.include_router(cart_item_router)
 app.include_router(order_router)
+app.include_router(order_item_router)
 app.include_router(auth_router)
 
 if __name__ == "__main__":
